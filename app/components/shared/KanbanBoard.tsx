@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -8,22 +8,28 @@ import {
   useSensor,
   useSensors,
   DragStartEvent,
+  DragOverEvent,
   DragEndEvent,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import type { Task } from '@/app/types/task.types';
 
 interface KanbanBoardProps {
   tasks: Task[];
-  onTaskMove: (taskId: number, newStatus: Task['status'], newPosition: number) => void;
+  onTasksReorder?: (updates: { id: number; position: number; status?: Task['status'] }[]) => void;
   onEditTask?: (task: Task) => void;
   onAddTask?: (status: Task['status']) => void;
 }
 
-export const KanbanBoard = ({ tasks, onTaskMove, onEditTask, onAddTask }: KanbanBoardProps) => {
-  const [activeTask, setActiveTask] = React.useState<Task | null>(null);
+export const KanbanBoard = ({ tasks: serverTasks, onTasksReorder, onEditTask, onAddTask }: KanbanBoardProps) => {
+  const [tasks, setTasks] = useState<Task[]>(serverTasks);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  useEffect(() => {
+    setTasks(serverTasks);
+  }, [serverTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -36,35 +42,81 @@ export const KanbanBoard = ({ tasks, onTaskMove, onEditTask, onAddTask }: Kanban
     if (task) setActiveTask(task);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveTask(null);
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
     const activeId = active.id as number;
     const overId = over.id as number | string;
 
-    const activeTask = tasks.find(t => t.id === activeId);
-    if (!activeTask) return;
+    if (activeId === overId) return;
 
-    // Find the container we are dropping into
-    let overStatus = '';
-    let newPosition = 0;
+    setTasks((prevTasks) => {
+      const activeTaskIndex = prevTasks.findIndex(t => t.id === activeId);
+      const overTaskIndex = prevTasks.findIndex(t => t.id === overId);
 
-    if (overId === 'pending' || overId === 'inprogress' || overId === 'done') {
-      overStatus = overId as string;
-      const tasksInColumn = tasks.filter(t => t.status === overStatus);
-      newPosition = tasksInColumn.length > 0 ? Math.max(...tasksInColumn.map(t => t.position)) + 1 : 0;
-    } else {
-      const overTask = tasks.find(t => t.id === overId);
-      if (overTask) {
-        overStatus = overTask.status;
-        newPosition = overTask.position; // Simplistic reordering
+      if (activeTaskIndex === -1) return prevTasks;
+      const activeTask = prevTasks[activeTaskIndex];
+
+      let overStatus = '';
+      if (overId === 'pending' || overId === 'inprogress' || overId === 'done') {
+        overStatus = overId as string;
+      } else if (overTaskIndex !== -1) {
+        overStatus = prevTasks[overTaskIndex].status;
       }
+
+      if (!overStatus) return prevTasks;
+
+      // Moving to a different column
+      if (activeTask.status !== overStatus) {
+        const newTasks = [...prevTasks];
+        // Change status to the new column
+        newTasks[activeTaskIndex] = { ...activeTask, status: overStatus as Task['status'] };
+        
+        // If we dragged over an item in the new column, we want to insert it there
+        if (overTaskIndex !== -1) {
+           return arrayMove(newTasks, activeTaskIndex, overTaskIndex);
+        }
+        return newTasks;
+      }
+
+      // Moving within the same column
+      if (activeTask.status === overStatus && overTaskIndex !== -1) {
+         return arrayMove(prevTasks, activeTaskIndex, overTaskIndex);
+      }
+
+      return prevTasks;
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveTask(null);
+    const { active, over } = event;
+    if (!over) {
+       // If dropped outside, revert to server state
+       setTasks(serverTasks);
+       return;
     }
 
-    if (overStatus && (activeTask.status !== overStatus || activeTask.position !== newPosition)) {
-      onTaskMove(activeId, overStatus as Task['status'], newPosition);
+    const activeId = active.id as number;
+    const currentTask = tasks.find(t => t.id === activeId);
+    const originalTask = serverTasks.find(t => t.id === activeId);
+
+    if (!currentTask || !originalTask) {
+       setTasks(serverTasks);
+       return;
+    }
+
+    // Assign sequential positions to tasks in their current visual order
+    const columnTasks = tasks.filter(t => t.status === currentTask.status);
+
+    if (onTasksReorder) {
+      const updates = columnTasks.map((t, idx) => ({ 
+        id: t.id, 
+        position: idx, 
+        status: t.id === activeId ? (currentTask.status as Task['status']) : undefined 
+      }));
+      onTasksReorder(updates);
     }
   };
 
@@ -73,6 +125,7 @@ export const KanbanBoard = ({ tasks, onTaskMove, onEditTask, onAddTask }: Kanban
       sensors={sensors} 
       collisionDetection={closestCorners} 
       onDragStart={handleDragStart} 
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-6 h-full items-start overflow-x-auto pb-4">

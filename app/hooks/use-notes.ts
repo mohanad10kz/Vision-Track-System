@@ -45,6 +45,21 @@ export function useNotes() {
       setNotes(prev => prev.map(n => n.id === id ? { ...n, status, position } : n));
       await updateNoteStatus(id, status, position);
       await load();
+    },
+    reorder: async (updates: {id: number, position: number, status?: Note['status']}[]) => {
+      // Optimistic update with sorting
+      setNotes(prev => {
+        const newNotes = prev.map(n => {
+          const update = updates.find(u => u.id === n.id);
+          if (update) {
+            return { ...n, position: update.position, ...(update.status && { status: update.status }) };
+          }
+          return n;
+        });
+        return newNotes.sort((a, b) => a.position - b.position);
+      });
+      await Promise.all(updates.map(u => updateNote(u.id, { position: u.position, ...(u.status && { status: u.status }) })));
+      await load();
     }
   };
 }

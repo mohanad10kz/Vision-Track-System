@@ -12,18 +12,16 @@ export interface Task {
 
 export interface CreateTaskInput {
   title: string;
-  description?: string;
+  description?: string | null;
   status?: Task['status'];
-  priority?: Task['priority'];
   position?: number;
-  due_date?: string;
+  due_date?: string | null;
 }
 
 export interface UpdateTaskInput {
   title?: string;
-  description?: string;
+  description?: string | null;
   status?: Task['status'];
-  priority?: Task['priority'];
   position?: number;
-  due_date?: string;
+  due_date?: string | null;
 }

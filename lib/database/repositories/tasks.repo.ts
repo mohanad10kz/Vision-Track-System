@@ -19,7 +19,7 @@ export const tasksRepo = {
     const info = stmt.run({
       title: input.title,
       description: input.description || null,
-      priority: input.priority || 'medium',
+      priority: 'medium',
       status: input.status || 'pending',
       position: input.position || 0,
       due_date: input.due_date || null

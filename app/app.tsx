@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/shared/Sidebar';
 import { Tasks } from './pages/Tasks';
 import { Notes } from './pages/Notes';
+import { Toaster } from './components/ui/sonner';
 import './styles/app.css';
 
 export default function App() {
@@ -32,6 +33,8 @@ export default function App() {
             <Route path="/settings" element={<Placeholder title="الإعدادات" />} />
           </Routes>
         </main>
+        
+        <Toaster position="bottom-right" richColors />
       </div>
     </HashRouter>
   );

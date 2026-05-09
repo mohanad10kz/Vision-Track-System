@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -8,22 +8,28 @@ import {
   useSensor,
   useSensors,
   DragStartEvent,
+  DragOverEvent,
   DragEndEvent,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import { NotesColumn } from './NotesColumn';
 import { NotesCard } from './NotesCard';
 import type { Note } from '@/app/types/note.types';
 
 interface NotesBoardProps {
   notes: Note[];
-  onNoteMove: (noteId: number, newStatus: Note['status'], newPosition: number) => void;
+  onNotesReorder?: (updates: { id: number; position: number; status?: Note['status'] }[]) => void;
   onEditNote?: (note: Note) => void;
   onAddNote?: (status: Note['status']) => void;
 }
 
-export const NotesBoard = ({ notes, onNoteMove, onEditNote, onAddNote }: NotesBoardProps) => {
-  const [activeNote, setActiveNote] = React.useState<Note | null>(null);
+export const NotesBoard = ({ notes: serverNotes, onNotesReorder, onEditNote, onAddNote }: NotesBoardProps) => {
+  const [notes, setNotes] = useState<Note[]>(serverNotes);
+  const [activeNote, setActiveNote] = useState<Note | null>(null);
+
+  useEffect(() => {
+    setNotes(serverNotes);
+  }, [serverNotes]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -36,34 +42,79 @@ export const NotesBoard = ({ notes, onNoteMove, onEditNote, onAddNote }: NotesBo
     if (note) setActiveNote(note);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveNote(null);
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
     const activeId = active.id as number;
     const overId = over.id as number | string;
 
-    const activeNote = notes.find(n => n.id === activeId);
-    if (!activeNote) return;
+    if (activeId === overId) return;
 
-    let overStatus = '';
-    let newPosition = 0;
+    setNotes((prevNotes) => {
+      const activeNoteIndex = prevNotes.findIndex(n => n.id === activeId);
+      const overNoteIndex = prevNotes.findIndex(n => n.id === overId);
 
-    if (overId === 'pending' || overId === 'inprogress' || overId === 'done') {
-      overStatus = overId as string;
-      const notesInColumn = notes.filter(n => n.status === overStatus);
-      newPosition = notesInColumn.length > 0 ? Math.max(...notesInColumn.map(n => n.position)) + 1 : 0;
-    } else {
-      const overNote = notes.find(n => n.id === overId);
-      if (overNote) {
-        overStatus = overNote.status;
-        newPosition = overNote.position;
+      if (activeNoteIndex === -1) return prevNotes;
+      const activeNote = prevNotes[activeNoteIndex];
+
+      let overStatus = '';
+      if (overId === 'pending' || overId === 'inprogress' || overId === 'done') {
+        overStatus = overId as string;
+      } else if (overNoteIndex !== -1) {
+        overStatus = prevNotes[overNoteIndex].status;
       }
+
+      if (!overStatus) return prevNotes;
+
+      // Moving to a different column
+      if (activeNote.status !== overStatus) {
+        const newNotes = [...prevNotes];
+        // Change status to the new column
+        newNotes[activeNoteIndex] = { ...activeNote, status: overStatus as Note['status'] };
+        
+        // If we dragged over an item in the new column, insert it there
+        if (overNoteIndex !== -1) {
+           return arrayMove(newNotes, activeNoteIndex, overNoteIndex);
+        }
+        return newNotes;
+      }
+
+      // Moving within the same column
+      if (activeNote.status === overStatus && overNoteIndex !== -1) {
+         return arrayMove(prevNotes, activeNoteIndex, overNoteIndex);
+      }
+
+      return prevNotes;
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveNote(null);
+    const { active, over } = event;
+    if (!over) {
+       setNotes(serverNotes);
+       return;
     }
 
-    if (overStatus && (activeNote.status !== overStatus || activeNote.position !== newPosition)) {
-      onNoteMove(activeId, overStatus as Note['status'], newPosition);
+    const activeId = active.id as number;
+    const currentNote = notes.find(n => n.id === activeId);
+    const originalNote = serverNotes.find(n => n.id === activeId);
+
+    if (!currentNote || !originalNote) {
+       setNotes(serverNotes);
+       return;
+    }
+
+    const columnNotes = notes.filter(n => n.status === currentNote.status);
+
+    if (onNotesReorder) {
+      const updates = columnNotes.map((n, idx) => ({ 
+        id: n.id, 
+        position: idx, 
+        status: n.id === activeId ? (currentNote.status as Note['status']) : undefined 
+      }));
+      onNotesReorder(updates);
     }
   };
 
@@ -72,6 +123,7 @@ export const NotesBoard = ({ notes, onNoteMove, onEditNote, onAddNote }: NotesBo
       sensors={sensors} 
       collisionDetection={closestCorners} 
       onDragStart={handleDragStart} 
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-6 h-full items-start overflow-x-auto pb-4">

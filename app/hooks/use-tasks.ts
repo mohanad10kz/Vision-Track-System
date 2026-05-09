@@ -3,7 +3,7 @@ import { useConveyor } from './use-conveyor';
 import type { Task, CreateTaskInput, UpdateTaskInput } from '../types/task.types';
 
 export function useTasks() {
-  const { getTasks, createTask, updateTask, deleteTask, updateTaskStatus } = useConveyor('db');
+  const { getTasks, createTask, updateTask, deleteTask } = useConveyor('db');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,10 +41,19 @@ export function useTasks() {
       await deleteTask(id); 
       await load(); 
     },
-    moveStatus: async (id: number, status: Task['status'], position: number) => {
-      // Optimistic update
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, status, position } : t));
-      await updateTaskStatus(id, status, position);
+    reorder: async (updates: {id: number, position: number, status?: Task['status']}[]) => {
+      // Optimistic update with sorting
+      setTasks(prev => {
+        const newTasks = prev.map(t => {
+          const update = updates.find(u => u.id === t.id);
+          if (update) {
+            return { ...t, position: update.position, ...(update.status && { status: update.status }) };
+          }
+          return t;
+        });
+        return newTasks.sort((a, b) => a.position - b.position);
+      });
+      await Promise.all(updates.map(u => updateTask(u.id, { position: u.position, ...(u.status && { status: u.status }) })));
       await load();
     }
   };
