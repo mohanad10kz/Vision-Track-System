@@ -126,7 +126,7 @@ export const NotesBoard = ({ notes: serverNotes, onNotesReorder, onEditNote, onA
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-6 h-full items-start overflow-x-auto pb-4">
+      <div className="flex gap-6 h-full overflow-x-auto pb-4">
         <NotesColumn 
           id="pending" 
           title="مسودة" 

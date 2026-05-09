@@ -30,7 +30,7 @@ const taskSchema = z.object({
 type TaskFormValues = z.infer<typeof taskSchema>;
 
 export const Tasks = () => {
-  const { tasks, create, update, moveStatus, remove, reorder } = useTasks();
+  const { tasks, create, update, remove, reorder } = useTasks();
   
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -38,7 +38,7 @@ export const Tasks = () => {
   
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<TaskFormValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: '',
@@ -123,7 +123,6 @@ export const Tasks = () => {
       <div className="flex-1 overflow-hidden">
         <KanbanBoard 
           tasks={tasks}
-          onTaskMove={(id, newStatus, newPosition) => moveStatus(id, newStatus, newPosition)}
           onTasksReorder={(updates) => reorder(updates)}
           onEditTask={(task) => handleOpenModal(task)}
           onAddTask={(status) => handleOpenModal(undefined, status)}

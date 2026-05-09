@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import type { Note } from '@/app/types/note.types';
 
 interface NotesCardProps {

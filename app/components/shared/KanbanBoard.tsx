@@ -128,7 +128,7 @@ export const KanbanBoard = ({ tasks: serverTasks, onTasksReorder, onEditTask, on
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-6 h-full items-start overflow-x-auto pb-4">
+      <div className="flex gap-6 h-full overflow-x-auto pb-4">
         <KanbanColumn 
           id="pending" 
           title="معلقة" 

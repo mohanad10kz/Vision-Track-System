@@ -1,8 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal } from 'lucide-react';
-// import { StatusBadge } from './StatusBadge';
+import { MoreHorizontal } from 'lucide-react';
 import type { Task } from '@/app/types/task.types';
 
 interface KanbanCardProps {

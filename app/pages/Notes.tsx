@@ -33,7 +33,7 @@ const noteSchema = z.object({
 type NoteFormValues = z.infer<typeof noteSchema>;
 
 export const Notes = () => {
-  const { notes, create, update, moveStatus, remove, reorder } = useNotes();
+  const { notes, create, update, remove, reorder } = useNotes();
   
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -130,7 +130,6 @@ export const Notes = () => {
       <div className="flex-1 overflow-hidden">
         <NotesBoard 
           notes={notes}
-          onNoteMove={(id, newStatus, newPosition) => moveStatus(id, newStatus, newPosition)}
           onNotesReorder={(updates) => reorder(updates)}
           onEditNote={(note) => handleOpenModal(note)}
           onAddNote={(status) => handleOpenModal(undefined, status)}
