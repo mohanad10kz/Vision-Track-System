@@ -3,15 +3,14 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
-} from 'recharts';
-import { 
   LayoutDashboard, MapPin, Wrench, AlertCircle, PhoneCall,
-  CheckCircle, Users, Activity
+  CheckCircle, Users, Activity, FileText
 } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { useDashboard } from '@/app/hooks/use-dashboard';
 import { VisitTypeBadge } from '@/app/components/shared/VisitTypeBadge';
+import { StatusBadge } from '@/app/components/shared/StatusBadge';
+import { PriorityBadge } from '@/app/components/shared/PriorityBadge';
 
 export function Dashboard() {
   const { data, loading } = useDashboard();
@@ -72,8 +71,8 @@ export function Dashboard() {
             bg="bg-amber-500/10"
           />
           <StatCard 
-            title="مهام معلقة" 
-            value={data.pendingTasksCount} 
+            title="تركيبات مجدولة" 
+            value={data.scheduledInstallationsCount} 
             icon={<Activity size={20} className="text-emerald-400" />} 
             bg="bg-emerald-500/10"
           />
@@ -87,31 +86,24 @@ export function Dashboard() {
 
         {/* Middle Row: Chart & Today Visits */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Weekly Chart */}
+          {/* Today Notes */}
           <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-80">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">الزيارات الأسبوعية</h3>
-            <div className="flex-1 w-full min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.weeklyVisitsChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis 
-                    dataKey="day" 
-                    tickFormatter={(val) => format(new Date(val), 'dd/MM')} 
-                    stroke="var(--color-text-muted)" 
-                    fontSize={12}
-                    tickMargin={10}
-                  />
-                  <YAxis stroke="var(--color-text-muted)" fontSize={12} allowDecimals={false} />
-                  <Tooltip 
-                    cursor={{ fill: 'var(--color-bg-hover)' }}
-                    contentStyle={{ backgroundColor: 'var(--color-bg-elevated)', borderColor: 'var(--color-border)', borderRadius: '8px' }}
-                  />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {data.weeklyVisitsChart.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={visitTypeColors[entry.type] || 'var(--color-brand)'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] mb-4">
+              <FileText size={16} className="text-blue-400" /> ملاحظات اليوم
+            </h3>
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+              {data.todayNotes.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] text-sm">
+                  لا توجد ملاحظات لليوم
+                </div>
+              ) : (
+                data.todayNotes.map(note => (
+                  <div key={note.id} className="p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border)] border-l-4" style={{ borderLeftColor: note.color || 'var(--color-brand)' }}>
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">{note.title}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">{note.content}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -133,6 +125,7 @@ export function Dashboard() {
                       <div className="flex items-center gap-2 mb-1">
                         <VisitTypeBadge type={visit.visit_type} />
                         <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{visit.client_name}</span>
+                        <StatusBadge status={visit.status} className="mr-auto" />
                       </div>
                       <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] truncate">
                         <MapPin size={12} /> {visit.client_address || 'بدون عنوان'}
@@ -147,21 +140,27 @@ export function Dashboard() {
 
         {/* Bottom Row: Urgent Tasks & Followup Calls */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Urgent Tasks */}
+          {/* Today Tasks */}
           <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-72">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-              <AlertCircle size={16} className="text-red-400" /> مهام عاجلة
+              <CheckCircle size={16} className="text-emerald-400" /> مهام اليوم
             </h3>
             <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-              {data.urgentTasks.length === 0 ? (
+              {data.todayTasks.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] text-sm">
-                  لا توجد مهام عاجلة
+                  لا توجد مهام لليوم
                 </div>
               ) : (
-                data.urgentTasks.map(task => (
-                  <div key={task.id} className="p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-red-500/20">
-                    <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">{task.title}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1">{task.description}</p>
+                data.todayTasks.map(task => (
+                  <div key={task.id} className="p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border)]">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{task.title}</p>
+                      <PriorityBadge priority={task.priority} />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1">{task.description}</p>
+                      <StatusBadge status={task.status} />
+                    </div>
                   </div>
                 ))
               )}

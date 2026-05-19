@@ -9,6 +9,9 @@ import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useTechnicians } from '@/app/hooks/use-technicians';
 import type { Technician, CreateTechnicianInput, UpdateTechnicianInput, TechnicianSpecialty, TechnicianStatus } from '@/app/types/technician.types';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 // ألوان Avatar للفنيين (دوارة حسب الـ id)
 const AVATAR_COLORS = [
@@ -37,21 +40,32 @@ interface TechFormProps {
   initial?: Technician;
 }
 
-function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
-  const [name, setName] = useState(initial?.name ?? '');
-  const [phone, setPhone] = useState(initial?.phone ?? '');
-  const [specialty, setSpecialty] = useState<TechnicianSpecialty | ''>(initial?.specialty ?? '');
-  const [notes, setNotes] = useState(initial?.notes ?? '');
-  const [saving, setSaving] = useState(false);
+const technicianSchema = z.object({
+  name: z.string().min(2, 'الاسم يجب أن يكون حرفين على الأقل'),
+  phone: z.string().min(5, 'رقم الهاتف قصير جداً'),
+  specialty: z.enum(['installation', 'maintenance', 'programming', 'all', '']).optional(),
+  notes: z.string().optional(),
+});
+type TechFormValues = z.infer<typeof technicianSchema>;
 
-  const handleSave = async () => {
-    if (!name.trim() || !phone.trim()) {
-      toast.error('الاسم ورقم الهاتف مطلوبان');
-      return;
+function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<TechFormValues>({
+    resolver: zodResolver(technicianSchema),
+    defaultValues: {
+      name: initial?.name ?? '',
+      phone: initial?.phone ?? '',
+      specialty: initial?.specialty ?? '',
+      notes: initial?.notes ?? '',
     }
-    setSaving(true);
-    await onSave({ name, phone, specialty: specialty as TechnicianSpecialty || null, notes: notes || null });
-    setSaving(false);
+  });
+
+  const onSubmit = async (data: TechFormValues) => {
+    await onSave({
+      name: data.name,
+      phone: data.phone,
+      specialty: (data.specialty || null) as TechnicianSpecialty | null,
+      notes: data.notes || null,
+    });
     onClose();
   };
 
@@ -75,71 +89,72 @@ function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
             <XCircle size={20} />
           </button>
         </div>
-        <div className="p-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الاسم *</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="اسم الفني"
-                autoFocus
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-              />
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="p-5 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الاسم *</label>
+                <input
+                  type="text"
+                  {...register('name')}
+                  placeholder="اسم الفني"
+                  autoFocus
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف *</label>
+                <input
+                  type="text"
+                  {...register('phone')}
+                  placeholder="09XX-XXX-XXX"
+                  dir="ltr"
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
+                />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+              </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف *</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="09XX-XXX-XXX"
-                dir="ltr"
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">التخصص</label>
+              <select
+                {...register('specialty')}
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+              >
+                <option value="">غير محدد</option>
+                <option value="installation">تركيب</option>
+                <option value="maintenance">صيانة</option>
+                <option value="programming">برمجة</option>
+                <option value="all">الكل</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
+              <textarea
+                {...register('notes')}
+                rows={2}
+                placeholder="ملاحظات إضافية..."
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">التخصص</label>
-            <select
-              value={specialty}
-              onChange={e => setSpecialty(e.target.value as TechnicianSpecialty)}
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             >
-              <option value="">غير محدد</option>
-              <option value="installation">تركيب</option>
-              <option value="maintenance">صيانة</option>
-              <option value="programming">برمجة</option>
-              <option value="all">الكل</option>
-            </select>
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}
+            </button>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={2}
-              placeholder="ملاحظات إضافية..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'جارٍ الحفظ...' : 'حفظ'}
-          </button>
-        </div>
+        </form>
       </motion.div>
     </div>
   );

@@ -4,14 +4,16 @@ import type { Task } from '../types/task.types';
 import type { Visit } from '../types/visit.types';
 import type { CallLog } from '../types/call.types';
 
+import type { Note } from '../types/note.types';
+
 export interface DashboardData {
   todayVisitsCount: number;
   scheduledMaintenanceCount: number;
-  pendingTasksCount: number;
+  scheduledInstallationsCount: number;
   totalClientsCount: number;
-  weeklyVisitsChart: { day: string; type: string; count: number }[];
+  todayNotes: Note[];
   todayVisits: Visit[];
-  urgentTasks: Task[];
+  todayTasks: Task[];
   pendingFollowupCalls: CallLog[];
 }
 

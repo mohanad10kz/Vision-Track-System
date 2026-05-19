@@ -14,6 +14,9 @@ import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useCalls } from '@/app/hooks/use-calls';
 import type { CallLog, CreateCallLogInput, UpdateCallLogInput, CallContactType, CallDirection } from '@/app/types/call.types';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 // ======================================================
 // Call Form Modal
@@ -25,34 +28,47 @@ interface CallFormProps {
   initial?: CallLog;
 }
 
-function CallForm({ open, onClose, onSave, initial }: CallFormProps) {
-  const [contactName, setContactName] = useState(initial?.contact_name ?? '');
-  const [contactType, setContactType] = useState<CallContactType>(initial?.contact_type ?? 'client');
-  const [phone, setPhone] = useState(initial?.phone ?? '');
-  const [direction, setDirection] = useState<CallDirection>(initial?.direction ?? 'incoming');
-  const [subject, setSubject] = useState(initial?.subject ?? '');
-  const [summary, setSummary] = useState(initial?.summary ?? '');
-  const [requiresFollowup, setRequiresFollowup] = useState(Boolean(initial?.requires_followup));
-  const [followupDate, setFollowupDate] = useState(initial?.followup_date ?? '');
-  const [saving, setSaving] = useState(false);
+const callSchema = z.object({
+  contact_name: z.string().min(2, 'الاسم يجب أن يكون حرفين على الأقل'),
+  contact_type: z.enum(['client', 'company', 'supplier', 'other']),
+  phone: z.string().optional(),
+  direction: z.enum(['incoming', 'outgoing']),
+  subject: z.string().min(2, 'الموضوع مطلوب'),
+  summary: z.string().optional(),
+  requires_followup: z.boolean(),
+  followup_date: z.string().optional(),
+});
+type CallFormValues = z.infer<typeof callSchema>;
 
-  const handleSave = async () => {
-    if (!contactName.trim() || !subject.trim()) {
-      toast.error('اسم جهة الاتصال والموضوع مطلوبان');
-      return;
+function CallForm({ open, onClose, onSave, initial }: CallFormProps) {
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<CallFormValues>({
+    resolver: zodResolver(callSchema),
+    defaultValues: {
+      contact_name: initial?.contact_name ?? '',
+      contact_type: initial?.contact_type ?? 'client',
+      phone: initial?.phone ?? '',
+      direction: initial?.direction ?? 'incoming',
+      subject: initial?.subject ?? '',
+      summary: initial?.summary ?? '',
+      requires_followup: Boolean(initial?.requires_followup),
+      followup_date: initial?.followup_date ?? '',
     }
-    setSaving(true);
+  });
+
+  const direction = watch('direction');
+  const requiresFollowup = watch('requires_followup');
+
+  const onSubmit = async (data: CallFormValues) => {
     await onSave({
-      contact_name: contactName,
-      contact_type: contactType,
-      phone: phone || null,
-      direction,
-      subject,
-      summary: summary || null,
-      requires_followup: requiresFollowup,
-      followup_date: requiresFollowup && followupDate ? followupDate : null,
+      contact_name: data.contact_name,
+      contact_type: data.contact_type,
+      phone: data.phone || null,
+      direction: data.direction,
+      subject: data.subject,
+      summary: data.summary || null,
+      requires_followup: data.requires_followup,
+      followup_date: data.requires_followup && data.followup_date ? data.followup_date : null,
     });
-    setSaving(false);
     onClose();
   };
 
@@ -82,135 +98,135 @@ function CallForm({ open, onClose, onSave, initial }: CallFormProps) {
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-4">
-          {/* الاتجاه */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">الاتجاه *</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setDirection('incoming')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
-                  direction === 'incoming'
-                    ? 'bg-green-500/15 border-green-500/40 text-green-400'
-                    : 'bg-[var(--color-bg-elevated)] border-[var(--color-border)] text-[var(--color-text-muted)]'
-                }`}
-              >
-                <PhoneIncoming size={15} /> وارد ↙
-              </button>
-              <button
-                onClick={() => setDirection('outgoing')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
-                  direction === 'outgoing'
-                    ? 'bg-blue-500/15 border-blue-500/40 text-blue-400'
-                    : 'bg-[var(--color-bg-elevated)] border-[var(--color-border)] text-[var(--color-text-muted)]'
-                }`}
-              >
-                <PhoneOutgoing size={15} /> صادر ↗
-              </button>
-            </div>
-          </div>
-
-          {/* الاسم + النوع */}
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="p-5 flex flex-col gap-4">
+            {/* الاتجاه */}
             <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">جهة الاتصال *</label>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">الاتجاه *</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setValue('direction', 'incoming')}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                    direction === 'incoming'
+                      ? 'bg-green-500/15 border-green-500/40 text-green-400'
+                      : 'bg-[var(--color-bg-elevated)] border-[var(--color-border)] text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  <PhoneIncoming size={15} /> وارد ↙
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValue('direction', 'outgoing')}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                    direction === 'outgoing'
+                      ? 'bg-blue-500/15 border-blue-500/40 text-blue-400'
+                      : 'bg-[var(--color-bg-elevated)] border-[var(--color-border)] text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  <PhoneOutgoing size={15} /> صادر ↗
+                </button>
+              </div>
+            </div>
+
+            {/* الاسم + النوع */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">جهة الاتصال *</label>
+                <input
+                  type="text"
+                  {...register('contact_name')}
+                  placeholder="اسم الشخص أو الجهة"
+                  autoFocus
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+                {errors.contact_name && <p className="text-red-500 text-xs mt-1">{errors.contact_name.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">النوع *</label>
+                <select
+                  {...register('contact_type')}
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                >
+                  {contactTypeOptions.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* الهاتف */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف</label>
               <input
                 type="text"
-                value={contactName}
-                onChange={e => setContactName(e.target.value)}
-                placeholder="اسم الشخص أو الجهة"
-                autoFocus
+                {...register('phone')}
+                placeholder="09XX-XXX-XXX"
+                dir="ltr"
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
+              />
+            </div>
+
+            {/* الموضوع */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الموضوع *</label>
+              <input
+                type="text"
+                {...register('subject')}
+                placeholder="موضوع الاتصال..."
                 className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
               />
+              {errors.subject && <p className="text-red-500 text-xs mt-1">{errors.subject.message}</p>}
             </div>
+
+            {/* الملخص */}
             <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">النوع *</label>
-              <select
-                value={contactType}
-                onChange={e => setContactType(e.target.value as CallContactType)}
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-              >
-                {contactTypeOptions.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملخص المحادثة</label>
+              <textarea
+                {...register('summary')}
+                rows={2}
+                placeholder="ما الذي تم الاتفاق عليه؟..."
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
+              />
+            </div>
+
+            {/* المتابعة */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('requires_followup')}
+                  className="rounded"
+                />
+                <span className="text-sm text-[var(--color-text-secondary)]">يحتاج متابعة</span>
+              </label>
+              {requiresFollowup && (
+                <input
+                  type="date"
+                  {...register('followup_date')}
+                  className="flex-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+              )}
             </div>
           </div>
 
-          {/* الهاتف */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف</label>
-            <input
-              type="text"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="09XX-XXX-XXX"
-              dir="ltr"
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
-            />
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}
+            </button>
           </div>
-
-          {/* الموضوع */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الموضوع *</label>
-            <input
-              type="text"
-              value={subject}
-              onChange={e => setSubject(e.target.value)}
-              placeholder="موضوع الاتصال..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-            />
-          </div>
-
-          {/* الملخص */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملخص المحادثة</label>
-            <textarea
-              value={summary}
-              onChange={e => setSummary(e.target.value)}
-              rows={2}
-              placeholder="ما الذي تم الاتفاق عليه؟..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-            />
-          </div>
-
-          {/* المتابعة */}
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={requiresFollowup}
-                onChange={e => setRequiresFollowup(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm text-[var(--color-text-secondary)]">يحتاج متابعة</span>
-            </label>
-            {requiresFollowup && (
-              <input
-                type="date"
-                value={followupDate}
-                onChange={e => setFollowupDate(e.target.value)}
-                className="flex-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'جارٍ الحفظ...' : 'حفظ'}
-          </button>
-        </div>
+        </form>
       </motion.div>
     </div>
   );

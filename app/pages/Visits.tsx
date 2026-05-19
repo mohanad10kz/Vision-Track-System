@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -19,6 +19,9 @@ import { useTechnicians } from '@/app/hooks/use-technicians';
 import type { Visit, VisitType, VisitStatus, CreateVisitInput } from '@/app/types/visit.types';
 import type { Technician } from '@/app/types/technician.types';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 // ======================================================
 // Visit Form Modal
@@ -31,70 +34,97 @@ interface VisitFormProps {
   clients: ReturnType<typeof useClients>['clients'];
 }
 
+const visitSchema = z.object({
+  visit_type: z.enum(['installation', 'maintenance', 'survey', 'followup']),
+  client_search: z.string().optional(),
+  client_name: z.string().min(2, 'اسم العميل مطلوب'),
+  client_phone: z.string().min(5, 'رقم الهاتف مطلوب'),
+  client_address: z.string().optional(),
+  technician_id: z.string().min(1, 'الفني مطلوب'),
+  visit_date: z.string().min(1, 'التاريخ مطلوب'),
+  visit_time: z.string().optional(),
+  notes: z.string().optional(),
+  
+  // Maintenance
+  problem_type: z.string().optional(),
+  problem_desc: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+
+  // Installation / Survey
+  camera_count: z.string().optional(),
+  system_type: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.visit_type === 'maintenance' && !data.problem_type) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'نوع المشكلة مطلوب للصيانة',
+      path: ['problem_type']
+    });
+  }
+});
+
+type VisitFormValues = z.infer<typeof visitSchema>;
+
 function VisitForm({ open, onClose, onSave, technicians, clients }: VisitFormProps) {
-  const [visitType, setVisitType] = useState<VisitType>('installation');
-  const [clientSearch, setClientSearch] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [clientAddress, setClientAddress] = useState('');
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<VisitFormValues>({
+    resolver: zodResolver(visitSchema),
+    defaultValues: {
+      visit_type: 'installation',
+      client_search: '',
+      client_name: '',
+      client_phone: '',
+      client_address: '',
+      technician_id: '',
+      visit_date: format(new Date(), 'yyyy-MM-dd'),
+      visit_time: '',
+      notes: '',
+      problem_type: '',
+      problem_desc: '',
+      priority: 'medium',
+      camera_count: '',
+      system_type: '',
+    }
+  });
+
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const [selectedTechId, setSelectedTechId] = useState('');
-  const [visitDate, setVisitDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [visitTime, setVisitTime] = useState('');
-  const [notes, setNotes] = useState('');
-  // Maintenance fields
-  const [problemType, setProblemType] = useState('');
-  const [problemDesc, setProblemDesc] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
-  // Installation / Survey fields
-  const [cameraCount, setCameraCount] = useState('');
-  const [systemType, setSystemType] = useState('');
-  const [saving, setSaving] = useState(false);
+
+  const visitType = watch('visit_type');
+  const clientSearch = watch('client_search');
 
   const filteredClients = clients.filter(c =>
-    clientSearch ? (c.name.includes(clientSearch) || c.phone.includes(clientSearch)) : true
+    clientSearch ? (c.name.includes(clientSearch || '') || c.phone.includes(clientSearch || '')) : true
   ).slice(0, 6);
 
   const selectClient = (c: typeof clients[0]) => {
     setSelectedClientId(c.id);
-    setClientName(c.name);
-    setClientPhone(c.phone);
-    setClientAddress(c.address ?? '');
-    setClientSearch(c.name);
+    setValue('client_name', c.name);
+    setValue('client_phone', c.phone);
+    setValue('client_address', c.address ?? '');
+    setValue('client_search', c.name);
     setShowClientDropdown(false);
   };
 
-  const handleSave = async () => {
-    if (!clientName || !clientPhone || !visitDate || !selectedTechId) {
-      toast.error('يرجى ملء الحقول المطلوبة');
-      return;
-    }
-    if (visitType === 'maintenance' && !problemType) {
-      toast.error('يرجى تحديد نوع المشكلة');
-      return;
-    }
-    setSaving(true);
-    const tech = technicians.find(t => t.id === Number(selectedTechId));
+  const onSubmit = async (data: VisitFormValues) => {
+    const tech = technicians.find(t => t.id === Number(data.technician_id));
     await onSave({
       client_id: selectedClientId,
-      client_name: clientName,
-      client_phone: clientPhone,
-      client_address: clientAddress || null,
-      visit_type: visitType,
-      visit_date: visitDate,
-      visit_time: visitTime || null,
-      technician_id: Number(selectedTechId),
+      client_name: data.client_name,
+      client_phone: data.client_phone,
+      client_address: data.client_address || null,
+      visit_type: data.visit_type,
+      visit_date: data.visit_date,
+      visit_time: data.visit_time || null,
+      technician_id: Number(data.technician_id),
       technician_name: tech?.name ?? null,
       status: 'scheduled',
-      problem_type: visitType === 'maintenance' ? problemType : null,
-      problem_desc: visitType === 'maintenance' ? problemDesc : null,
-      camera_count: (visitType === 'installation' || visitType === 'survey') && cameraCount ? Number(cameraCount) : null,
-      system_type: (visitType === 'installation' || visitType === 'survey') && systemType ? systemType : null,
-      priority: visitType === 'maintenance' ? priority : 'medium',
-      notes: notes || null,
+      problem_type: data.visit_type === 'maintenance' ? data.problem_type || null : null,
+      problem_desc: data.visit_type === 'maintenance' ? data.problem_desc || null : null,
+      camera_count: (data.visit_type === 'installation' || data.visit_type === 'survey') && data.camera_count ? Number(data.camera_count) : null,
+      system_type: (data.visit_type === 'installation' || data.visit_type === 'survey') && data.system_type ? data.system_type || null : null,
+      priority: data.visit_type === 'maintenance' ? (data.priority || 'medium') : 'medium',
+      notes: data.notes || null,
     });
-    setSaving(false);
     onClose();
   };
 
@@ -124,252 +154,255 @@ function VisitForm({ open, onClose, onSave, technicians, clients }: VisitFormPro
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-4">
-          {/* نوع الزيارة */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">نوع الزيارة *</label>
-            <div className="grid grid-cols-2 gap-2">
-              {visitTypeOptions.map(opt => {
-                const Icon = opt.icon;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setVisitType(opt.value)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
-                      visitType === opt.value
-                        ? 'bg-[var(--color-brand)] text-white border-[var(--color-brand)]'
-                        : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-brand)]'
-                    }`}
-                  >
-                    <Icon size={15} />
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* العميل — Combobox */}
-          <div className="relative">
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">العميل</label>
-            <input
-              type="text"
-              value={clientSearch}
-              onChange={e => { setClientSearch(e.target.value); setClientName(e.target.value); setShowClientDropdown(true); setSelectedClientId(null); }}
-              onFocus={() => setShowClientDropdown(true)}
-              placeholder="ابحث عن عميل أو اكتب اسماً جديداً..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-            />
-            {showClientDropdown && filteredClients.length > 0 && (
-              <div className="absolute z-50 top-full mt-1 w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden">
-                {filteredClients.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => selectClient(c)}
-                    className="w-full text-right px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-between"
-                  >
-                    <span className="text-[var(--color-text-muted)] text-xs">{c.phone}</span>
-                    <span>{c.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* اسم العميل + هاتف */}
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="p-5 flex flex-col gap-4">
+            {/* نوع الزيارة */}
             <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">اسم العميل *</label>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">نوع الزيارة *</label>
+              <div className="grid grid-cols-2 gap-2">
+                {visitTypeOptions.map(opt => {
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setValue('visit_type', opt.value)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                        visitType === opt.value
+                          ? 'bg-[var(--color-brand)] text-white border-[var(--color-brand)]'
+                          : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-brand)]'
+                      }`}
+                    >
+                      <Icon size={15} />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* العميل — Combobox */}
+            <div className="relative">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">العميل</label>
               <input
                 type="text"
-                value={clientName}
-                onChange={e => setClientName(e.target.value)}
-                placeholder="اسم العميل"
+                {...register('client_search', {
+                  onChange: (e) => {
+                    setValue('client_name', e.target.value);
+                    setShowClientDropdown(true);
+                    setSelectedClientId(null);
+                  }
+                })}
+                onFocus={() => setShowClientDropdown(true)}
+                placeholder="ابحث عن عميل أو اكتب اسماً جديداً..."
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+              />
+              {showClientDropdown && filteredClients.length > 0 && (
+                <div className="absolute z-50 top-full mt-1 w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden">
+                  {filteredClients.map(c => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => selectClient(c)}
+                      className="w-full text-right px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-between"
+                    >
+                      <span className="text-[var(--color-text-muted)] text-xs">{c.phone}</span>
+                      <span>{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* اسم العميل + هاتف */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">اسم العميل *</label>
+                <input
+                  type="text"
+                  {...register('client_name')}
+                  placeholder="اسم العميل"
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+                {errors.client_name && <p className="text-red-500 text-xs mt-1">{errors.client_name.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف *</label>
+                <input
+                  type="text"
+                  {...register('client_phone')}
+                  placeholder="09XX-XXX-XXX"
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
+                  dir="ltr"
+                />
+                {errors.client_phone && <p className="text-red-500 text-xs mt-1">{errors.client_phone.message}</p>}
+              </div>
+            </div>
+
+            {/* العنوان */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">العنوان</label>
+              <input
+                type="text"
+                {...register('client_address')}
+                placeholder="الحي، الشارع..."
                 className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف *</label>
-              <input
-                type="text"
-                value={clientPhone}
-                onChange={e => setClientPhone(e.target.value)}
-                placeholder="09XX-XXX-XXX"
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
-                dir="ltr"
-              />
-            </div>
-          </div>
 
-          {/* العنوان */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">العنوان</label>
-            <input
-              type="text"
-              value={clientAddress}
-              onChange={e => setClientAddress(e.target.value)}
-              placeholder="الحي، الشارع..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-            />
-          </div>
+            {/* الفني + التاريخ + الوقت */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الفني *</label>
+                <select
+                  {...register('technician_id')}
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                >
+                  <option value="">اختر...</option>
+                  {technicians.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                {errors.technician_id && <p className="text-red-500 text-xs mt-1">{errors.technician_id.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">التاريخ *</label>
+                <input
+                  type="date"
+                  {...register('visit_date')}
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+                {errors.visit_date && <p className="text-red-500 text-xs mt-1">{errors.visit_date.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الوقت</label>
+                <input
+                  type="time"
+                  {...register('visit_time')}
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+              </div>
+            </div>
 
-          {/* الفني + التاريخ + الوقت */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الفني *</label>
-              <select
-                value={selectedTechId}
-                onChange={e => setSelectedTechId(e.target.value)}
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-              >
-                <option value="">اختر...</option>
-                {technicians.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">التاريخ *</label>
-              <input
-                type="date"
-                value={visitDate}
-                onChange={e => setVisitDate(e.target.value)}
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الوقت</label>
-              <input
-                type="time"
-                value={visitTime}
-                onChange={e => setVisitTime(e.target.value)}
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-              />
-            </div>
-          </div>
-
-          {/* حقول خاصة بالصيانة */}
-          <AnimatePresence>
-            {visitType === 'maintenance' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="flex flex-col gap-3 overflow-hidden"
-              >
-                <div className="grid grid-cols-2 gap-3">
+            {/* حقول خاصة بالصيانة */}
+            <AnimatePresence>
+              {visitType === 'maintenance' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="flex flex-col gap-3 overflow-hidden"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">نوع المشكلة *</label>
+                      <select
+                        {...register('problem_type')}
+                        className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                      >
+                        <option value="">اختر...</option>
+                        <option value="camera">كاميرا</option>
+                        <option value="dvr">DVR/NVR</option>
+                        <option value="cables">أسلاك</option>
+                        <option value="power">طاقة</option>
+                        <option value="programming">برمجة</option>
+                        <option value="other">أخرى</option>
+                      </select>
+                      {errors.problem_type && <p className="text-red-500 text-xs mt-1">{errors.problem_type.message}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الأولوية *</label>
+                      <select
+                        {...register('priority')}
+                        className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+                      >
+                        <option value="low">منخفضة</option>
+                        <option value="medium">متوسطة</option>
+                        <option value="high">عالية</option>
+                        <option value="urgent">عاجلة</option>
+                      </select>
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">نوع المشكلة *</label>
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">وصف المشكلة</label>
+                    <textarea
+                      {...register('problem_desc')}
+                      rows={2}
+                      placeholder="وصف مختصر للمشكلة..."
+                      className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* حقول التركيب والمسح */}
+              {(visitType === 'installation' || visitType === 'survey') && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="grid grid-cols-2 gap-3 overflow-hidden"
+                >
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                      {visitType === 'survey' ? 'عدد الكاميرات المقدّر' : 'عدد الكاميرات'}
+                    </label>
+                    <input
+                      type="number"
+                      {...register('camera_count')}
+                      min="1"
+                      placeholder="0"
+                      className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                      {visitType === 'survey' ? 'نوع النظام المقترح' : 'نوع النظام'}
+                    </label>
                     <select
-                      value={problemType}
-                      onChange={e => setProblemType(e.target.value)}
+                      {...register('system_type')}
                       className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
                     >
                       <option value="">اختر...</option>
-                      <option value="camera">كاميرا</option>
-                      <option value="dvr">DVR/NVR</option>
-                      <option value="cables">أسلاك</option>
-                      <option value="power">طاقة</option>
-                      <option value="programming">برمجة</option>
-                      <option value="other">أخرى</option>
+                      <option value="DVR">DVR</option>
+                      <option value="NVR">NVR</option>
+                      <option value="IP">IP</option>
+                      <option value="Hybrid">Hybrid</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الأولوية *</label>
-                    <select
-                      value={priority}
-                      onChange={e => setPriority(e.target.value as typeof priority)}
-                      className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-                    >
-                      <option value="low">منخفضة</option>
-                      <option value="medium">متوسطة</option>
-                      <option value="high">عالية</option>
-                      <option value="urgent">عاجلة</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">وصف المشكلة</label>
-                  <textarea
-                    value={problemDesc}
-                    onChange={e => setProblemDesc(e.target.value)}
-                    rows={2}
-                    placeholder="وصف مختصر للمشكلة..."
-                    className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-                  />
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* حقول التركيب والمسح */}
-            {(visitType === 'installation' || visitType === 'survey') && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="grid grid-cols-2 gap-3 overflow-hidden"
-              >
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                    {visitType === 'survey' ? 'عدد الكاميرات المقدّر' : 'عدد الكاميرات'}
-                  </label>
-                  <input
-                    type="number"
-                    value={cameraCount}
-                    onChange={e => setCameraCount(e.target.value)}
-                    min="1"
-                    placeholder="0"
-                    className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                    {visitType === 'survey' ? 'نوع النظام المقترح' : 'نوع النظام'}
-                  </label>
-                  <select
-                    value={systemType}
-                    onChange={e => setSystemType(e.target.value)}
-                    className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-                  >
-                    <option value="">اختر...</option>
-                    <option value="DVR">DVR</option>
-                    <option value="NVR">NVR</option>
-                    <option value="IP">IP</option>
-                    <option value="Hybrid">Hybrid</option>
-                  </select>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* ملاحظات */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={2}
-              placeholder="ملاحظات إضافية..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-            />
+            {/* ملاحظات */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
+              <textarea
+                {...register('notes')}
+                rows={2}
+                placeholder="ملاحظات إضافية..."
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'جارٍ الحفظ...' : 'حفظ الزيارة'}
-          </button>
-        </div>
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? 'جارٍ الحفظ...' : 'حفظ الزيارة'}
+            </button>
+          </div>
+        </form>
       </motion.div>
     </div>
   );
@@ -614,17 +647,13 @@ export function Visits() {
     setDeleteId(null);
   };
 
-  const todayLabel = format(new Date(), 'EEEE d MMMM', { locale: ar });
-  const tomorrowLabel = format(new Date(Date.now() + 86400000), 'EEEE d MMMM', { locale: ar });
-
   const renderGroup = (label: string, items: Visit[]) => {
-    const filtered = filteredVisits(items);
-    if (filtered.length === 0) return null;
+    if (items.length === 0) return null;
     return (
       <div key={label} className="mb-6">
-        <GroupHeader label={label} count={filtered.length} />
+        <GroupHeader label={label} count={items.length} />
         <div className="flex flex-col gap-3">
-          {filtered.map(v => (
+          {items.map(v => (
             <VisitCard
               key={v.id}
               visit={v}
@@ -635,6 +664,36 @@ export function Visits() {
         </div>
       </div>
     );
+  };
+
+  const renderAllGroups = () => {
+    const allFiltered = filteredVisits(visits);
+    if (allFiltered.length === 0) return null;
+    
+    const grouped = allFiltered.reduce((acc, v) => {
+      if (!acc[v.visit_date]) acc[v.visit_date] = [];
+      acc[v.visit_date].push(v);
+      return acc;
+    }, {} as Record<string, Visit[]>);
+
+    const dates = Object.keys(grouped);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+    
+    const todayGroup = dates.filter(d => d === todayStr);
+    const tomorrowGroup = dates.filter(d => d === tomorrowStr);
+    const upcomingDates = dates.filter(d => d > tomorrowStr).sort((a, b) => a.localeCompare(b));
+    const pastDates = dates.filter(d => d < todayStr).sort((a, b) => b.localeCompare(a));
+
+    const finalOrder = [...todayGroup, ...tomorrowGroup, ...upcomingDates, ...pastDates];
+
+    return finalOrder.map(date => {
+      let label = format(new Date(date), 'EEEE d MMMM yyyy', { locale: ar });
+      if (date === todayStr) label = `اليوم — ${label}`;
+      else if (date === tomorrowStr) label = `الغد — ${label}`;
+      
+      return renderGroup(label, grouped[date]);
+    });
   };
 
   return (
@@ -706,10 +765,7 @@ export function Visits() {
           />
         ) : (
           <>
-            {renderGroup(`اليوم — ${todayLabel}`, today)}
-            {renderGroup(`الغد — ${tomorrowLabel}`, tomorrow)}
-            {renderGroup('لاحقاً', upcoming)}
-            {renderGroup('السابقة', past)}
+            {renderAllGroups()}
           </>
         )}
       </div>

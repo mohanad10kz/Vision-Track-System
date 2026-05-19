@@ -8,6 +8,9 @@ import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useClients } from '@/app/hooks/use-clients';
 import type { Client, CreateClientInput, UpdateClientInput } from '@/app/types/client.types';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 // ======================================================
 // Client Form Modal
@@ -19,21 +22,32 @@ interface ClientFormProps {
   initial?: Client;
 }
 
-function ClientForm({ open, onClose, onSave, initial }: ClientFormProps) {
-  const [name, setName] = useState(initial?.name ?? '');
-  const [phone, setPhone] = useState(initial?.phone ?? '');
-  const [address, setAddress] = useState(initial?.address ?? '');
-  const [notes, setNotes] = useState(initial?.notes ?? '');
-  const [saving, setSaving] = useState(false);
+const clientSchema = z.object({
+  name: z.string().min(2, 'الاسم يجب أن يكون حرفين على الأقل'),
+  phone: z.string().min(5, 'رقم الهاتف قصير جداً'),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+});
+type ClientFormValues = z.infer<typeof clientSchema>;
 
-  const handleSave = async () => {
-    if (!name.trim() || !phone.trim()) {
-      toast.error('الاسم ورقم الهاتف مطلوبان');
-      return;
+function ClientForm({ open, onClose, onSave, initial }: ClientFormProps) {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ClientFormValues>({
+    resolver: zodResolver(clientSchema),
+    defaultValues: {
+      name: initial?.name ?? '',
+      phone: initial?.phone ?? '',
+      address: initial?.address ?? '',
+      notes: initial?.notes ?? '',
     }
-    setSaving(true);
-    await onSave({ name, phone, address: address || null, notes: notes || null });
-    setSaving(false);
+  });
+
+  const onSubmit = async (data: ClientFormValues) => {
+    await onSave({
+      name: data.name,
+      phone: data.phone,
+      address: data.address || null,
+      notes: data.notes || null,
+    });
     onClose();
   };
 
@@ -57,67 +71,68 @@ function ClientForm({ open, onClose, onSave, initial }: ClientFormProps) {
             <XCircle size={20} />
           </button>
         </div>
-        <div className="p-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="p-5 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الاسم *</label>
+                <input
+                  type="text"
+                  {...register('name')}
+                  placeholder="اسم العميل"
+                  autoFocus
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+                />
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف *</label>
+                <input
+                  type="text"
+                  {...register('phone')}
+                  placeholder="09XX-XXX-XXX"
+                  dir="ltr"
+                  className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
+                />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+              </div>
+            </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الاسم *</label>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">العنوان</label>
               <input
                 type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="اسم العميل"
-                autoFocus
+                {...register('address')}
+                placeholder="الحي، الشارع..."
                 className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">رقم الهاتف *</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="09XX-XXX-XXX"
-                dir="ltr"
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] font-mono"
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
+              <textarea
+                {...register('notes')}
+                rows={3}
+                placeholder="نوع النظام، تفاصيل مهمة..."
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">العنوان</label>
-            <input
-              type="text"
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="الحي، الشارع..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-            />
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}
+            </button>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={3}
-              placeholder="نوع النظام، تفاصيل مهمة..."
-              className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-[var(--color-border)]">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'جارٍ الحفظ...' : 'حفظ'}
-          </button>
-        </div>
+        </form>
       </motion.div>
     </div>
   );
