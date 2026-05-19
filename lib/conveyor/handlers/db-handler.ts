@@ -1,19 +1,59 @@
 import { handle } from '@/lib/main/shared';
 import { tasksRepo } from '../../database/repositories/tasks.repo';
 import { notesRepo } from '../../database/repositories/notes.repo';
+import { visitsRepo } from '../../database/repositories/visits.repo';
+import { clientsRepo } from '../../database/repositories/clients.repo';
+import { techniciansRepo } from '../../database/repositories/technicians.repo';
+import { callsRepo } from '../../database/repositories/calls.repo';
 
 export const registerDbHandlers = () => {
+  // ==================== TASKS ====================
   handle('getTasks', () => tasksRepo.findAll());
-  handle('getTaskById', ({ id }: any) => tasksRepo.findById(id));
-  handle('createTask', (input: any) => tasksRepo.create(input));
-  handle('updateTask', ({ id, input }: any) => tasksRepo.update(id, input));
-  handle('updateTaskStatus', ({ id, status, position }: any) => tasksRepo.updateStatus(id, status, position));
-  handle('deleteTask', ({ id }: any) => tasksRepo.delete(id));
+  handle('getTaskById', ({ id }: { id: number }) => tasksRepo.findById(id));
+  handle('createTask', (input: Parameters<typeof tasksRepo.create>[0]) => tasksRepo.create(input));
+  handle('updateTask', ({ id, input }: { id: number; input: Parameters<typeof tasksRepo.update>[1] }) => tasksRepo.update(id, input));
+  handle('updateTaskStatus', ({ id, status, position }: { id: number; status: string; position: number }) => tasksRepo.updateStatus(id, status, position));
+  handle('deleteTask', ({ id }: { id: number }) => tasksRepo.delete(id));
+  handle('getArchivedTasks', (filter: { from?: string; to?: string; search?: string }) => tasksRepo.findArchived(filter));
 
+  // ==================== NOTES ====================
   handle('getNotes', () => notesRepo.findAll());
-  handle('getNoteById', ({ id }: any) => notesRepo.findById(id));
-  handle('createNote', (input: any) => notesRepo.create(input));
-  handle('updateNote', ({ id, input }: any) => notesRepo.update(id, input));
-  handle('updateNoteStatus', ({ id, status, position }: any) => notesRepo.updateStatus(id, status, position));
-  handle('deleteNote', ({ id }: any) => notesRepo.delete(id));
+  handle('getNoteById', ({ id }: { id: number }) => notesRepo.findById(id));
+  handle('createNote', (input: Parameters<typeof notesRepo.create>[0]) => notesRepo.create(input));
+  handle('updateNote', ({ id, input }: { id: number; input: Parameters<typeof notesRepo.update>[1] }) => notesRepo.update(id, input));
+  handle('updateNoteStatus', ({ id, status, position }: { id: number; status: string; position: number }) => notesRepo.updateStatus(id, status, position));
+  handle('deleteNote', ({ id }: { id: number }) => notesRepo.delete(id));
+  handle('getArchivedNotes', (filter: { from?: string; to?: string; search?: string }) => notesRepo.findArchived(filter));
+
+  // ==================== VISITS ====================
+  handle('getVisits', (filter?: { type?: string; status?: string; technicianId?: number; from?: string; to?: string; search?: string }) => visitsRepo.findAll(filter ?? undefined));
+  handle('getVisitById', ({ id }: { id: number }) => visitsRepo.findById(id));
+  handle('createVisit', (input: Parameters<typeof visitsRepo.create>[0]) => visitsRepo.create(input));
+  handle('updateVisit', ({ id, input }: { id: number; input: Parameters<typeof visitsRepo.update>[1] }) => visitsRepo.update(id, input));
+  handle('updateVisitStatus', ({ id, status, resolutionNotes }: { id: number; status: string; resolutionNotes?: string }) => visitsRepo.updateStatus(id, status, resolutionNotes));
+  handle('deleteVisit', ({ id }: { id: number }) => visitsRepo.delete(id));
+
+  // ==================== CLIENTS ====================
+  handle('getClients', (filter?: { search?: string }) => clientsRepo.findAll(filter?.search));
+  handle('getClientById', ({ id }: { id: number }) => clientsRepo.findById(id));
+  handle('createClient', (input: Parameters<typeof clientsRepo.create>[0]) => clientsRepo.create(input));
+  handle('updateClient', ({ id, input }: { id: number; input: Parameters<typeof clientsRepo.update>[1] }) => clientsRepo.update(id, input));
+  handle('deleteClient', ({ id }: { id: number }) => clientsRepo.delete(id));
+
+  // ==================== TECHNICIANS ====================
+  handle('getTechnicians', () => techniciansRepo.findAll());
+  handle('getTechnicianById', ({ id }: { id: number }) => techniciansRepo.findById(id));
+  handle('createTechnician', (input: Parameters<typeof techniciansRepo.create>[0]) => techniciansRepo.create(input));
+  handle('updateTechnician', ({ id, input }: { id: number; input: Parameters<typeof techniciansRepo.update>[1] }) => techniciansRepo.update(id, input));
+  handle('updateTechnicianStatus', ({ id, status }: { id: number; status: string }) => techniciansRepo.updateStatus(id, status));
+  handle('deleteTechnician', ({ id }: { id: number }) => techniciansRepo.delete(id));
+  handle('getTechnicianTodayVisits', ({ id, today }: { id: number; today: string }) => techniciansRepo.countTodayVisits(id, today));
+
+  // ==================== CALLS ====================
+  handle('getCalls', (filter?: { search?: string; contactType?: string; direction?: string; requiresFollowup?: boolean }) => callsRepo.findAll(filter ?? undefined));
+  handle('getCallById', ({ id }: { id: number }) => callsRepo.findById(id));
+  handle('createCall', (input: Parameters<typeof callsRepo.create>[0]) => callsRepo.create(input));
+  handle('updateCall', ({ id, input }: { id: number; input: Parameters<typeof callsRepo.update>[1] }) => callsRepo.update(id, input));
+  handle('markCallFollowupDone', ({ id }: { id: number }) => callsRepo.markFollowupDone(id));
+  handle('deleteCall', ({ id }: { id: number }) => callsRepo.delete(id));
 };

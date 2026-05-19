@@ -1,10 +1,13 @@
+export type NoteStatus = 'pending' | 'inprogress' | 'done';
+
 export interface Note {
   id: number;
   title: string;
   content: string | null;
-  status: 'pending' | 'inprogress' | 'done';
+  status: NoteStatus;
   color: string;
   position: number;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -12,7 +15,7 @@ export interface Note {
 export interface CreateNoteInput {
   title: string;
   content?: string;
-  status?: Note['status'];
+  status?: NoteStatus;
   color?: string;
   position?: number;
 }
@@ -20,7 +23,7 @@ export interface CreateNoteInput {
 export interface UpdateNoteInput {
   title?: string;
   content?: string;
-  status?: Note['status'];
+  status?: NoteStatus;
   color?: string;
   position?: number;
 }

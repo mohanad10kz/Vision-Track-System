@@ -2,8 +2,13 @@ import { getDb } from '../db';
 import type { Task, CreateTaskInput, UpdateTaskInput } from '@/app/types/task.types';
 
 export const tasksRepo = {
+  // جلب المهام النشطة فقط (غير المؤرشفة)
   findAll: (): Task[] => {
-    return getDb().prepare('SELECT * FROM tasks ORDER BY status ASC, position ASC').all() as Task[];
+    return getDb().prepare(`
+      SELECT * FROM tasks
+      WHERE archived_at IS NULL
+      ORDER BY position ASC, created_at DESC
+    `).all() as Task[];
   },
 
   findById: (id: number): Task | undefined => {
@@ -19,7 +24,7 @@ export const tasksRepo = {
     const info = stmt.run({
       title: input.title,
       description: input.description || null,
-      priority: 'medium',
+      priority: input.priority || 'medium',
       status: input.status || 'pending',
       position: input.position || 0,
       due_date: input.due_date || null
@@ -30,7 +35,7 @@ export const tasksRepo = {
 
   update: (id: number, input: UpdateTaskInput): boolean => {
     const updates: string[] = [];
-    const values: Record<string, any> = { id };
+    const values: Record<string, unknown> = { id };
 
     Object.entries(input).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -58,5 +63,39 @@ export const tasksRepo = {
   delete: (id: number): boolean => {
     const info = getDb().prepare('DELETE FROM tasks WHERE id = ?').run(id);
     return info.changes > 0;
-  }
+  },
+
+  // أرشفة المهام المكتملة التي مضى عليها أكثر من 7 أيام
+  archiveOldDone: (): number => {
+    const result = getDb().prepare(`
+      UPDATE tasks
+      SET archived_at = datetime('now', 'localtime')
+      WHERE status = 'done'
+        AND archived_at IS NULL
+        AND updated_at < datetime('now', 'localtime', '-7 days')
+    `).run();
+    return result.changes;
+  },
+
+  // جلب المهام المؤرشفة مع فلترة بالتاريخ والبحث
+  findArchived: (filter: { from?: string; to?: string; search?: string }): Task[] => {
+    let query = `SELECT * FROM tasks WHERE archived_at IS NOT NULL`;
+    const params: string[] = [];
+
+    if (filter.from) {
+      query += ` AND created_at >= ?`;
+      params.push(filter.from);
+    }
+    if (filter.to) {
+      query += ` AND created_at <= ?`;
+      params.push(filter.to + ' 23:59:59');
+    }
+    if (filter.search) {
+      query += ` AND title LIKE ?`;
+      params.push(`%${filter.search}%`);
+    }
+
+    query += ` ORDER BY archived_at DESC`;
+    return getDb().prepare(query).all(...params) as Task[];
+  },
 };

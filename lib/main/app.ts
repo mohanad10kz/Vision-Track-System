@@ -4,10 +4,23 @@ import { registerAppHandlers } from '../conveyor/handlers/app-handler';
 import { registerWindowHandlers } from '../conveyor/handlers/window-handler';
 import { registerDbHandlers } from '../conveyor/handlers/db-handler';
 import { getDb } from '../database/db';
+import { tasksRepo } from '../database/repositories/tasks.repo';
+import { notesRepo } from '../database/repositories/notes.repo';
 
 export function createAppWindow(): void {
   // Initialize Database
   getDb();
+
+  // تشغيل الأرشفة التلقائية عند بدء التطبيق
+  try {
+    const archivedTasks = tasksRepo.archiveOldDone();
+    const archivedNotes = notesRepo.archiveOldDone();
+    if (archivedTasks > 0 || archivedNotes > 0) {
+      console.log(`[Startup] Archived ${archivedTasks} tasks, ${archivedNotes} notes`);
+    }
+  } catch (err) {
+    console.error('[Startup] Auto-archive failed:', err);
+  }
 
   const mainWindow = new BrowserWindow({
     width: 1280,

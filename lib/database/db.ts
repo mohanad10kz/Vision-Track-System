@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
-import { createTables } from './migrations';
+import { createTables, runMigrations } from './migrations';
 
 let db: Database.Database | null = null;
 
@@ -16,8 +16,11 @@ export const initDb = () => {
   // Enable foreign keys
   db.pragma('foreign_keys = ON');
 
-  // Run migrations
+  // Run schema creation
   createTables(db);
+
+  // Run safe migrations (adds new columns without deleting data)
+  runMigrations(db);
 
   return db;
 };

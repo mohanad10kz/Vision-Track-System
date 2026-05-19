@@ -2,8 +2,13 @@ import { getDb } from '../db';
 import type { Note, CreateNoteInput, UpdateNoteInput } from '@/app/types/note.types';
 
 export const notesRepo = {
+  // جلب الملاحظات النشطة فقط (غير المؤرشفة)
   findAll: (): Note[] => {
-    return getDb().prepare('SELECT * FROM notes ORDER BY status ASC, position ASC').all() as Note[];
+    return getDb().prepare(`
+      SELECT * FROM notes
+      WHERE archived_at IS NULL
+      ORDER BY position ASC, created_at DESC
+    `).all() as Note[];
   },
 
   findById: (id: number): Note | undefined => {
@@ -29,7 +34,7 @@ export const notesRepo = {
 
   update: (id: number, input: UpdateNoteInput): boolean => {
     const updates: string[] = [];
-    const values: Record<string, any> = { id };
+    const values: Record<string, unknown> = { id };
 
     Object.entries(input).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -57,5 +62,39 @@ export const notesRepo = {
   delete: (id: number): boolean => {
     const info = getDb().prepare('DELETE FROM notes WHERE id = ?').run(id);
     return info.changes > 0;
-  }
+  },
+
+  // أرشفة الملاحظات المكتملة التي مضى عليها أكثر من 7 أيام
+  archiveOldDone: (): number => {
+    const result = getDb().prepare(`
+      UPDATE notes
+      SET archived_at = datetime('now', 'localtime')
+      WHERE status = 'done'
+        AND archived_at IS NULL
+        AND updated_at < datetime('now', 'localtime', '-7 days')
+    `).run();
+    return result.changes;
+  },
+
+  // جلب الملاحظات المؤرشفة مع فلترة بالتاريخ والبحث
+  findArchived: (filter: { from?: string; to?: string; search?: string }): Note[] => {
+    let query = `SELECT * FROM notes WHERE archived_at IS NOT NULL`;
+    const params: string[] = [];
+
+    if (filter.from) {
+      query += ` AND created_at >= ?`;
+      params.push(filter.from);
+    }
+    if (filter.to) {
+      query += ` AND created_at <= ?`;
+      params.push(filter.to + ' 23:59:59');
+    }
+    if (filter.search) {
+      query += ` AND title LIKE ?`;
+      params.push(`%${filter.search}%`);
+    }
+
+    query += ` ORDER BY archived_at DESC`;
+    return getDb().prepare(query).all(...params) as Note[];
+  },
 };

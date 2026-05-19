@@ -11,6 +11,7 @@ export const createTables = (db: Database) => {
       priority    TEXT NOT NULL DEFAULT 'medium',  -- low | medium | high | urgent
       position    INTEGER NOT NULL DEFAULT 0,       -- للـ Drag & Drop
       due_date    TEXT,
+      archived_at TEXT DEFAULT NULL,               -- null = نشطة، تاريخ = مؤرشفة
       created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
       updated_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
@@ -25,93 +26,132 @@ export const createTables = (db: Database) => {
       status      TEXT NOT NULL DEFAULT 'pending', -- pending | inprogress | done
       color       TEXT DEFAULT '#0EA5E9',           -- لون البطاقة
       position    INTEGER NOT NULL DEFAULT 0,
+      archived_at TEXT DEFAULT NULL,               -- null = نشطة، تاريخ = مؤرشفة
       created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
       updated_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
 
-  // جدول العملاء
+  // جدول العملاء — مبسّط (دفتر عناوين للربط مع الزيارات)
   db.exec(`
     CREATE TABLE IF NOT EXISTS clients (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT NOT NULL,
-      phone        TEXT NOT NULL,
-      address      TEXT,
-      city         TEXT,
-      camera_type  TEXT,            -- نوع الكاميرا عنده
-      system_type  TEXT,            -- نظام الـ DVR/NVR/IP
-      notes        TEXT,
-      status       TEXT DEFAULT 'active', -- active | potential | inactive
-      created_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-      updated_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL,
+      phone      TEXT NOT NULL,
+      address    TEXT,
+      notes      TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
 
   // جدول الفنيين
   db.exec(`
     CREATE TABLE IF NOT EXISTS technicians (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT NOT NULL,
-      phone        TEXT NOT NULL,
-      specialty    TEXT,             -- installation | maintenance | programming | all
-      status       TEXT DEFAULT 'available', -- available | busy | off
-      notes        TEXT,
-      created_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL,
+      phone      TEXT NOT NULL,
+      specialty  TEXT,   -- installation | maintenance | programming | all
+      status     TEXT DEFAULT 'available', -- available | busy | off
+      notes      TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
 
-  // جدول طلبات الصيانة
+  // جدول الزيارات الميدانية — موحد لجميع الأنواع
   db.exec(`
-    CREATE TABLE IF NOT EXISTS maintenance_requests (
+    CREATE TABLE IF NOT EXISTS visits (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       client_id        INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-      client_name      TEXT NOT NULL,             -- نسخة مستقلة في حال حُذف العميل
+      client_name      TEXT NOT NULL,
       client_phone     TEXT NOT NULL,
-      problem_type     TEXT NOT NULL,             -- camera | dvr | cables | power | other
-      problem_desc     TEXT,
-      priority         TEXT DEFAULT 'medium',     -- low | medium | high | urgent
-      status           TEXT DEFAULT 'new',        -- new | inprogress | waiting_part | resolved | closed
+      client_address   TEXT,
+      visit_type       TEXT NOT NULL,
+      -- 'installation' | 'maintenance' | 'survey' | 'followup'
+      visit_date       TEXT NOT NULL,
+      visit_time       TEXT,
       technician_id    INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
-      visit_date       TEXT,
+      technician_name  TEXT,
+      status           TEXT DEFAULT 'scheduled',
+      -- 'scheduled' | 'completed' | 'cancelled' | 'postponed'
+      problem_type     TEXT,
+      problem_desc     TEXT,
+      camera_count     INTEGER,
+      system_type      TEXT,
+      priority         TEXT DEFAULT 'medium',
+      notes            TEXT,
       resolution_notes TEXT,
       created_at       TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
       updated_at       TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
 
-  // جدول الزيارات الميدانية
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS visits (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id       INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-      client_name     TEXT NOT NULL,
-      client_address  TEXT,
-      technician_id   INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
-      technician_name TEXT,
-      visit_type      TEXT NOT NULL,    -- installation | maintenance | inspection | followup
-      visit_date      TEXT NOT NULL,
-      visit_time      TEXT,
-      status          TEXT DEFAULT 'scheduled', -- scheduled | completed | cancelled | postponed
-      notes           TEXT,
-      created_at      TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-      updated_at      TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-    );
-  `);
-
   // جدول سجل الاتصالات
   db.exec(`
     CREATE TABLE IF NOT EXISTS call_logs (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      contact_name  TEXT NOT NULL,      -- اسم المتصل/المتصل به
-      contact_type  TEXT NOT NULL,      -- client | company | supplier | other
-      phone         TEXT,
-      direction     TEXT NOT NULL,      -- incoming | outgoing
-      subject       TEXT NOT NULL,
-      summary       TEXT,
-      requires_followup INTEGER DEFAULT 0, -- boolean
-      followup_date TEXT,
-      followup_done INTEGER DEFAULT 0,
-      created_at    TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_name      TEXT NOT NULL,
+      contact_type      TEXT NOT NULL,   -- client | company | supplier | other
+      phone             TEXT,
+      direction         TEXT NOT NULL,   -- incoming | outgoing
+      subject           TEXT NOT NULL,
+      summary           TEXT,
+      requires_followup INTEGER DEFAULT 0,
+      followup_date     TEXT,
+      followup_done     INTEGER DEFAULT 0,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
+};
+
+// Migrations — تُشغَّل بعد createTables لإضافة أعمدة جديدة بأمان
+export const runMigrations = (db: Database) => {
+
+  // Migration 001 — إضافة archived_at لجدول tasks
+  const tasksColumns = db.pragma('table_info(tasks)') as { name: string }[];
+  const hasArchivedAtTasks = tasksColumns.some(col => col.name === 'archived_at');
+  if (!hasArchivedAtTasks) {
+    db.exec(`ALTER TABLE tasks ADD COLUMN archived_at TEXT DEFAULT NULL;`);
+    console.log('[Migration] tasks: archived_at column added');
+  }
+
+  // Migration 002 — إضافة archived_at لجدول notes
+  const notesColumns = db.pragma('table_info(notes)') as { name: string }[];
+  const hasArchivedAtNotes = notesColumns.some(col => col.name === 'archived_at');
+  if (!hasArchivedAtNotes) {
+    db.exec(`ALTER TABLE notes ADD COLUMN archived_at TEXT DEFAULT NULL;`);
+    console.log('[Migration] notes: archived_at column added');
+  }
+
+  // Migration 003 — إضافة client_phone لجدول visits إذا لم يكن موجوداً
+  const visitsColumns = db.pragma('table_info(visits)') as { name: string }[];
+  const hasClientPhone = visitsColumns.some(col => col.name === 'client_phone');
+  if (!hasClientPhone) {
+    db.exec(`ALTER TABLE visits ADD COLUMN client_phone TEXT NOT NULL DEFAULT '';`);
+    console.log('[Migration] visits: client_phone column added');
+  }
+
+  // Migration 004 — إضافة الأعمدة المفصّلة للزيارات إذا لم تكن موجودة
+  const visitColNames = visitsColumns.map(c => c.name);
+  if (!visitColNames.includes('problem_type')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN problem_type TEXT;`);
+  }
+  if (!visitColNames.includes('problem_desc')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN problem_desc TEXT;`);
+  }
+  if (!visitColNames.includes('camera_count')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN camera_count INTEGER;`);
+  }
+  if (!visitColNames.includes('system_type')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN system_type TEXT;`);
+  }
+  if (!visitColNames.includes('priority')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN priority TEXT DEFAULT 'medium';`);
+  }
+  if (!visitColNames.includes('resolution_notes')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN resolution_notes TEXT;`);
+  }
+  if (!visitColNames.includes('technician_name')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN technician_name TEXT;`);
+  }
 };

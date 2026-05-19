@@ -2,70 +2,88 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  CheckSquare, 
-  StickyNote, 
+  CheckSquare,
+  Archive,
+  StickyNote,
   Users, 
-  Wrench, 
   CalendarDays,
-  PhoneCall,
-  Settings
+  Phone,
+  Settings,
+  HardHat
 } from 'lucide-react';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'لوحة التحكم', path: '/' },
-  { icon: CheckSquare, label: 'المهام', path: '/tasks' },
-  { icon: StickyNote, label: 'الملاحظات', path: '/notes' },
-  { icon: Users, label: 'العملاء', path: '/clients' },
-  { icon: Wrench, label: 'الصيانة', path: '/maintenance' },
-  { icon: CalendarDays, label: 'الزيارات', path: '/visits' },
-  { icon: Users, label: 'الفنيون', path: '/technicians' }, // Reusing Users icon for now
-  { icon: PhoneCall, label: 'سجل الاتصالات', path: '/calls' },
+interface NavItem {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+  indent?: boolean;
+  end?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { icon: LayoutDashboard, label: 'لوحة التحكم',    path: '/',              end: true },
+  { icon: CheckSquare,     label: 'المهام',           path: '/tasks',         end: true },
+  { icon: Archive,         label: 'أرشيف المهام',     path: '/tasks/archive', indent: true },
+  { icon: StickyNote,      label: 'الملاحظات',        path: '/notes',         end: true },
+  { icon: Archive,         label: 'أرشيف الملاحظات',  path: '/notes/archive', indent: true },
+  { icon: CalendarDays,    label: 'الزيارات',         path: '/visits'         },
+  { icon: Users,           label: 'العملاء',           path: '/clients'        },
+  { icon: HardHat,         label: 'الفنيون',           path: '/technicians'    },
+  { icon: Phone,           label: 'سجل الاتصالات',    path: '/calls'          },
 ];
 
 export const Sidebar = () => {
   return (
-    <aside className="w-[250px] bg-[var(--color-sidebar-bg)] border-l border-[var(--color-sidebar-border)] flex flex-col h-full fixed right-0 top-0">
-      <div className="p-6 border-b border-[var(--color-sidebar-border)]">
-        <h1 className="text-xl font-bold text-brand flex items-center gap-2">
-          <div className="w-8 h-8 bg-brand/10 rounded-lg flex items-center justify-center">
-            <div className="w-4 h-4 bg-brand rounded-sm rotate-45"></div>
+    <aside className="w-[240px] bg-[var(--color-sidebar-bg)] border-l border-[var(--color-sidebar-border)] flex flex-col h-full fixed right-0 top-0 z-30">
+      {/* Logo */}
+      <div className="p-5 border-b border-[var(--color-sidebar-border)]">
+        <h1 className="text-xl font-bold text-[var(--color-brand)] flex items-center gap-2">
+          <div className="w-8 h-8 bg-[var(--color-brand)]/10 rounded-lg flex items-center justify-center">
+            <div className="w-4 h-4 bg-[var(--color-brand)] rounded-sm rotate-45" />
           </div>
           VisionTrack
         </h1>
-        <p className="text-xs text-text-muted mt-1 font-mono uppercase tracking-wider">Industrial Precision</p>
+        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-mono uppercase tracking-wider">
+          Industrial Precision
+        </p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
+            end={item.end}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              `flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 ${
+                item.indent ? 'mr-4 py-2 px-3 text-xs' : 'px-3 py-2.5'
+              } ${
                 isActive
-                  ? 'bg-[var(--color-sidebar-active)] text-brand border-r-2 border-brand'
-                  : 'text-text-secondary hover:bg-[var(--color-bg-hover)] hover:text-text-primary'
+                  ? 'bg-[var(--color-brand)]/10 text-[var(--color-brand)] border-r-2 border-[var(--color-brand)]'
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
               }`
             }
           >
-            <item.icon className="w-5 h-5" />
-            {item.label}
+            <item.icon className={item.indent ? 'w-3.5 h-3.5' : 'w-4.5 h-4.5'} size={item.indent ? 14 : 18} />
+            <span className={item.indent ? 'opacity-80' : ''}>{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-[var(--color-sidebar-border)]">
+      {/* Settings */}
+      <div className="p-3 border-t border-[var(--color-sidebar-border)]">
         <NavLink
           to="/settings"
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
               isActive
-                ? 'bg-[var(--color-sidebar-active)] text-brand border-r-2 border-brand'
-                : 'text-text-secondary hover:bg-[var(--color-bg-hover)] hover:text-text-primary'
+                ? 'bg-[var(--color-brand)]/10 text-[var(--color-brand)] border-r-2 border-[var(--color-brand)]'
+                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
             }`
           }
         >
-          <Settings className="w-5 h-5" />
+          <Settings size={18} />
           الإعدادات
         </NavLink>
       </div>
