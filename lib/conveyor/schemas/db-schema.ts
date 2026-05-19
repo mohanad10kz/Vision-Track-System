@@ -176,4 +176,10 @@ export const dbIpcSchema = {
     args: z.tuple([z.object({ id: z.number() })]),
     return: z.any(),
   },
+
+  // ==================== DASHBOARD ====================
+  getDashboardData: {
+    args: z.tuple([]),
+    return: z.any(),
+  },
 };

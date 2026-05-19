@@ -5,6 +5,7 @@ import { visitsRepo } from '../../database/repositories/visits.repo';
 import { clientsRepo } from '../../database/repositories/clients.repo';
 import { techniciansRepo } from '../../database/repositories/technicians.repo';
 import { callsRepo } from '../../database/repositories/calls.repo';
+import { dashboardRepo } from '../../database/repositories/dashboard.repo';
 
 export const registerDbHandlers = () => {
   // ==================== TASKS ====================
@@ -56,4 +57,7 @@ export const registerDbHandlers = () => {
   handle('updateCall', ({ id, input }: { id: number; input: Parameters<typeof callsRepo.update>[1] }) => callsRepo.update(id, input));
   handle('markCallFollowupDone', ({ id }: { id: number }) => callsRepo.markFollowupDone(id));
   handle('deleteCall', ({ id }: { id: number }) => callsRepo.delete(id));
+
+  // ==================== DASHBOARD ====================
+  handle('getDashboardData', () => dashboardRepo.getDashboardData());
 };

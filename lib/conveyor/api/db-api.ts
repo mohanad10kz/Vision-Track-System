@@ -50,4 +50,7 @@ export class DbApi extends ConveyorApi {
   updateCall = (id: number, input: unknown) => this.invoke('updateCall', { id, input });
   markCallFollowupDone = (id: number) => this.invoke('markCallFollowupDone', { id });
   deleteCall = (id: number) => this.invoke('deleteCall', { id });
+
+  // ==================== DASHBOARD ====================
+  getDashboardData = () => this.invoke('getDashboardData');
 }
