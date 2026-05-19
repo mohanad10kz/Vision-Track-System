@@ -26,7 +26,6 @@
 | recharts | latest | الرسوم البيانية |
 | react-router-dom | v6 | التنقل بين الصفحات |
 | date-fns | latest | معالجة التواريخ |
-| xlsx | latest | تصدير Excel |
 | framer-motion | موجود في القالب | الحركات والانتقالات |
 | zod | موجود مع Conveyor | التحقق من البيانات |
 
@@ -67,6 +66,12 @@
   --color-done: #10B981;           /* أخضر — مكتمل */
   --color-urgent: #EF4444;         /* أحمر — عاجل */
 
+  /* Visit Type Colors */
+  --color-installation: #8B5CF6;   /* بنفسجي — تركيب */
+  --color-maintenance: #F59E0B;    /* برتقالي — صيانة */
+  --color-survey: #06B6D4;         /* سماوي — مسح ميداني */
+  --color-followup: #6B7280;       /* رمادي — متابعة */
+
   /* Borders */
   --color-border: #30363D;
   --color-border-subtle: #21262D;
@@ -84,13 +89,11 @@
 /* في index.css — استورد من Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* العربية تستخدم IBM Plex Sans Arabic */
-/* الأرقام والكود تستخدم JetBrains Mono */
-
 body {
   font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
   direction: rtl; /* النظام بالكامل RTL */
 }
+/* الأرقام والتواريخ تستخدم JetBrains Mono */
 ```
 
 ### قواعد التصميم العامة
@@ -106,24 +109,23 @@ body {
 ## 📁 هيكل الملفات الكامل
 
 ```
-electron-react-app/          ← المجلد الجذري (القالب الجاهز)
+electron-react-app/
 │
-├── app/                     ← React Renderer Process (واجهة المستخدم)
+├── app/                              ← React Renderer Process
 │   ├── assets/
-│   │   ├── logo.svg
-│   │   └── fonts/
+│   │   └── logo.svg
 │   │
 │   ├── components/
-│   │   ├── ui/              ← Shadcn components (لا تعدّل عليها)
-│   │   ├── window/          ← Titlebar و Menus (من القالب)
-│   │   │
-│   │   └── shared/          ← مكوناتك المشتركة (أنشئها)
+│   │   ├── ui/                       ← Shadcn components (لا تعدّل)
+│   │   ├── window/                   ← Titlebar و Menus (من القالب)
+│   │   └── shared/                   ← مكوناتك المشتركة
 │   │       ├── Sidebar.tsx
 │   │       ├── PageHeader.tsx
 │   │       ├── KanbanBoard.tsx
 │   │       ├── KanbanColumn.tsx
 │   │       ├── KanbanCard.tsx
 │   │       ├── StatusBadge.tsx
+│   │       ├── VisitTypeBadge.tsx
 │   │       ├── PriorityBadge.tsx
 │   │       ├── EmptyState.tsx
 │   │       ├── ConfirmDialog.tsx
@@ -131,83 +133,80 @@ electron-react-app/          ← المجلد الجذري (القالب الج�
 │   │       ├── DataTable.tsx
 │   │       └── FormModal.tsx
 │   │
-│   ├── pages/               ← صفحة لكل قسم (أنشئها)
+│   ├── pages/
 │   │   ├── Dashboard.tsx
 │   │   ├── Tasks.tsx
+│   │   ├── TaskArchive.tsx           ← أرشيف المهام المكتملة
 │   │   ├── Notes.tsx
-│   │   ├── Maintenance.tsx
-│   │   ├── Clients.tsx
-│   │   ├── Visits.tsx
+│   │   ├── NoteArchive.tsx           ← أرشيف الملاحظات المكتملة
+│   │   ├── Visits.tsx                ← يشمل: تركيب + صيانة + مسح + متابعة
+│   │   ├── Clients.tsx               ← مبسّطة: اسم + هاتف + ملاحظات
 │   │   ├── Technicians.tsx
 │   │   ├── CallLog.tsx
 │   │   └── Settings.tsx
 │   │
-│   ├── hooks/               ← Custom React Hooks
-│   │   ├── use-conveyor.ts  ← موجود في القالب
+│   ├── hooks/
+│   │   ├── use-conveyor.ts           ← موجود في القالب
 │   │   ├── use-tasks.ts
 │   │   ├── use-notes.ts
-│   │   ├── use-maintenance.ts
-│   │   ├── use-clients.ts
 │   │   ├── use-visits.ts
+│   │   ├── use-clients.ts
 │   │   ├── use-technicians.ts
 │   │   └── use-calls.ts
 │   │
-│   ├── store/               ← Zustand Global State
-│   │   ├── app.store.ts     ← الصفحة الحالية + إعدادات عامة
-│   │   └── ui.store.ts      ← حالة UI (modals, filters, search)
+│   ├── store/
+│   │   ├── app.store.ts
+│   │   └── ui.store.ts
 │   │
-│   ├── types/               ← TypeScript Interfaces
+│   ├── types/
 │   │   ├── task.types.ts
 │   │   ├── note.types.ts
-│   │   ├── maintenance.types.ts
+│   │   ├── visit.types.ts            ← يشمل جميع أنواع الزيارات
 │   │   ├── client.types.ts
-│   │   ├── visit.types.ts
 │   │   ├── technician.types.ts
 │   │   ├── call.types.ts
-│   │   └── index.ts         ← re-export الكل
+│   │   └── index.ts
 │   │
 │   ├── lib/
-│   │   └── utils.ts         ← helper functions
+│   │   └── utils.ts
 │   │
-│   ├── App.tsx              ← Layout الرئيسي + Router
+│   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
 │
-├── lib/                     ← Electron Main Process
-│   ├── conveyor/            ← IPC System (من القالب)
+├── lib/                              ← Electron Main Process
+│   ├── conveyor/
 │   │   ├── schemas/
-│   │   │   ├── app-schema.ts      ← موجود
-│   │   │   ├── db-schema.ts       ← أنشئه (schemas لكل الجداول)
-│   │   │   └── window-schema.ts   ← موجود
+│   │   │   ├── app-schema.ts         ← موجود
+│   │   │   ├── db-schema.ts          ← أنشئه
+│   │   │   └── window-schema.ts      ← موجود
 │   │   ├── api/
-│   │   │   ├── app-api.ts         ← موجود
-│   │   │   ├── db-api.ts          ← أنشئه (API methods للـ DB)
-│   │   │   └── window-api.ts      ← موجود
+│   │   │   ├── app-api.ts            ← موجود
+│   │   │   ├── db-api.ts             ← أنشئه
+│   │   │   └── window-api.ts         ← موجود
 │   │   └── handlers/
-│   │       ├── app-handler.ts     ← موجود
-│   │       ├── db-handler.ts      ← أنشئه (DB operations)
-│   │       └── window-handler.ts  ← موجود
+│   │       ├── app-handler.ts        ← موجود
+│   │       ├── db-handler.ts         ← أنشئه
+│   │       └── window-handler.ts     ← موجود
 │   │
-│   ├── database/            ← SQLite Layer (أنشئه بالكامل)
-│   │   ├── db.ts            ← تهيئة الاتصال + مسار الملف
-│   │   ├── migrations.ts    ← إنشاء الجداول
+│   ├── database/
+│   │   ├── db.ts
+│   │   ├── migrations.ts
 │   │   └── repositories/
 │   │       ├── tasks.repo.ts
 │   │       ├── notes.repo.ts
-│   │       ├── maintenance.repo.ts
+│   │       ├── visits.repo.ts        ← repo موحد لجميع أنواع الزيارات
 │   │       ├── clients.repo.ts
-│   │       ├── visits.repo.ts
 │   │       ├── technicians.repo.ts
 │   │       └── calls.repo.ts
 │   │
-│   ├── main/                ← من القالب
+│   ├── main/
 │   │   ├── app.ts
 │   │   └── shared.ts
-│   │
-│   └── preload/             ← من القالب
+│   └── preload/
 │       └── index.ts
 │
-└── resources/build/         ← icons للتطبيق
+└── resources/build/
 ```
 
 ---
@@ -224,10 +223,11 @@ export const createTables = (db: Database) => {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       title       TEXT NOT NULL,
       description TEXT,
-      status      TEXT NOT NULL DEFAULT 'pending', -- pending | inprogress | done
-      priority    TEXT NOT NULL DEFAULT 'medium',  -- low | medium | high | urgent
-      position    INTEGER NOT NULL DEFAULT 0,       -- للـ Drag & Drop
+      status      TEXT NOT NULL DEFAULT 'pending',  -- pending | inprogress | done
+      priority    TEXT NOT NULL DEFAULT 'medium',   -- low | medium | high | urgent
+      position    INTEGER NOT NULL DEFAULT 0,        -- للـ Drag & Drop
       due_date    TEXT,
+      archived_at TEXT,                              -- null = نشطة، تاريخ = مؤرشفة
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -239,96 +239,102 @@ export const createTables = (db: Database) => {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       title       TEXT NOT NULL,
       content     TEXT,
-      status      TEXT NOT NULL DEFAULT 'pending', -- pending | inprogress | done
-      color       TEXT DEFAULT '#0EA5E9',           -- لون البطاقة
+      status      TEXT NOT NULL DEFAULT 'pending',  -- pending | inprogress | done
+      color       TEXT DEFAULT '#0EA5E9',
       position    INTEGER NOT NULL DEFAULT 0,
+      archived_at TEXT,                              -- null = نشطة، تاريخ = مؤرشفة
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 
-  // جدول العملاء
+  // جدول العملاء — مبسّط (دفتر عناوين للربط مع الزيارات)
   db.exec(`
     CREATE TABLE IF NOT EXISTS clients (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT NOT NULL,
-      phone        TEXT NOT NULL,
-      address      TEXT,
-      city         TEXT,
-      camera_type  TEXT,            -- نوع الكاميرا عنده
-      system_type  TEXT,            -- نظام الـ DVR/NVR/IP
-      notes        TEXT,
-      status       TEXT DEFAULT 'active', -- active | potential | inactive
-      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL,
+      phone      TEXT NOT NULL,
+      address    TEXT,
+      notes      TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 
   // جدول الفنيين
   db.exec(`
     CREATE TABLE IF NOT EXISTS technicians (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT NOT NULL,
-      phone        TEXT NOT NULL,
-      specialty    TEXT,             -- installation | maintenance | programming | all
-      status       TEXT DEFAULT 'available', -- available | busy | off
-      notes        TEXT,
-      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL,
+      phone      TEXT NOT NULL,
+      specialty  TEXT,   -- installation | maintenance | programming | all
+      status     TEXT DEFAULT 'available', -- available | busy | off
+      notes      TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 
-  // جدول طلبات الصيانة
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS maintenance_requests (
-      id               INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id        INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-      client_name      TEXT NOT NULL,             -- نسخة مستقلة في حال حُذف العميل
-      client_phone     TEXT NOT NULL,
-      problem_type     TEXT NOT NULL,             -- camera | dvr | cables | power | other
-      problem_desc     TEXT,
-      priority         TEXT DEFAULT 'medium',     -- low | medium | high | urgent
-      status           TEXT DEFAULT 'new',        -- new | inprogress | waiting_part | resolved | closed
-      technician_id    INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
-      visit_date       TEXT,
-      resolution_notes TEXT,
-      created_at       TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-
-  // جدول الزيارات الميدانية
+  // جدول الزيارات الميدانية — موحد لجميع الأنواع
+  // هذا الجدول يغطي: التركيب + الصيانة + المسح الميداني + المتابعة
   db.exec(`
     CREATE TABLE IF NOT EXISTS visits (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id       INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-      client_name     TEXT NOT NULL,
-      client_address  TEXT,
-      technician_id   INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
-      technician_name TEXT,
-      visit_type      TEXT NOT NULL,    -- installation | maintenance | inspection | followup
-      visit_date      TEXT NOT NULL,
-      visit_time      TEXT,
-      status          TEXT DEFAULT 'scheduled', -- scheduled | completed | cancelled | postponed
-      notes           TEXT,
-      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      -- بيانات العميل (مرتبطة أو يدوية)
+      client_id        INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+      client_name      TEXT NOT NULL,   -- نسخة مستقلة دائماً
+      client_phone     TEXT NOT NULL,
+      client_address   TEXT,
+
+      -- نوع الزيارة — هذا العمود هو قلب التمييز بين الأنواع
+      visit_type       TEXT NOT NULL,
+      -- القيم المسموحة:
+      -- 'installation'  → تركيب جديد
+      -- 'maintenance'   → صيانة وإصلاح
+      -- 'survey'        → مسح ميداني (لتقدير عرض سعر أو تصميم نظام)
+      -- 'followup'      → متابعة بعد تركيب أو صيانة سابقة
+
+      -- بيانات الزيارة
+      visit_date       TEXT NOT NULL,
+      visit_time       TEXT,
+      technician_id    INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
+      technician_name  TEXT,            -- نسخة مستقلة
+
+      -- الحالة
+      status           TEXT DEFAULT 'scheduled',
+      -- القيم: scheduled | completed | cancelled | postponed
+
+      -- حقول خاصة بنوع الزيارة
+      -- تُستخدم فقط عند الحاجة حسب visit_type
+      problem_type     TEXT,            -- لـ maintenance: camera|dvr|cables|power|other
+      problem_desc     TEXT,            -- لـ maintenance: وصف المشكلة
+      camera_count     INTEGER,         -- لـ installation/survey: عدد الكاميرات
+      system_type      TEXT,            -- لـ installation/survey: DVR|NVR|IP|Hybrid
+      priority         TEXT DEFAULT 'medium', -- لـ maintenance: low|medium|high|urgent
+
+      -- ملاحظات الزيارة والنتيجة
+      notes            TEXT,            -- ملاحظات قبل الزيارة
+      resolution_notes TEXT,            -- ما تم تنفيذه (يُعبأ بعد الزيارة)
+
+      created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 
   // جدول سجل الاتصالات
   db.exec(`
     CREATE TABLE IF NOT EXISTS call_logs (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      contact_name  TEXT NOT NULL,      -- اسم المتصل/المتصل به
-      contact_type  TEXT NOT NULL,      -- client | company | supplier | other
-      phone         TEXT,
-      direction     TEXT NOT NULL,      -- incoming | outgoing
-      subject       TEXT NOT NULL,
-      summary       TEXT,
-      requires_followup INTEGER DEFAULT 0, -- boolean
-      followup_date TEXT,
-      followup_done INTEGER DEFAULT 0,
-      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_name      TEXT NOT NULL,
+      contact_type      TEXT NOT NULL,   -- client | company | supplier | other
+      phone             TEXT,
+      direction         TEXT NOT NULL,   -- incoming | outgoing
+      subject           TEXT NOT NULL,
+      summary           TEXT,
+      requires_followup INTEGER DEFAULT 0,
+      followup_date     TEXT,
+      followup_done     INTEGER DEFAULT 0,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 };
@@ -336,166 +342,184 @@ export const createTables = (db: Database) => {
 
 ---
 
-## 🔄 نمط تدفق البيانات (Data Flow Pattern)
+## 🔄 منطق الأرشفة للمهام والملاحظات
 
-يجب الالتزام بهذا النمط في **كل** الوحدات:
+المهام والملاحظات **لا تُحذف** من قاعدة البيانات — بل تُؤرشف.
+
+```
+منطق العرض في صفحة المهام/الملاحظات (Kanban):
+  → اعرض فقط: archived_at IS NULL
+  → عمود Done يعرض: status='done' AND archived_at IS NULL AND updated_at >= 7 أيام
+
+منطق الأرشفة التلقائية (تُشغَّل عند فتح التطبيق):
+  → أرشف: status='done' AND archived_at IS NULL AND updated_at < تاريخ قبل 7 أيام
+  → الأرشفة = UPDATE tasks SET archived_at = datetime('now') WHERE ...
+
+صفحة الأرشيف:
+  → تعرض: archived_at IS NOT NULL
+  → مفلترة بـ: [هذا الأسبوع | هذا الشهر | 3 أشهر | كل الوقت]
+  → + date range picker + بحث بالعنوان
+```
+
+---
+
+## 🔄 نمط تدفق البيانات
 
 ```
 [React Page/Component]
         ↓  استدعاء custom hook
-[Custom Hook - use-tasks.ts]
+[Custom Hook]
         ↓  يستدعي useConveyor()
 [Conveyor API - db-api.ts]
         ↓  IPC عبر Electron
 [DB Handler - db-handler.ts]
         ↓  يستدعي Repository
-[Repository - tasks.repo.ts]
+[Repository]
         ↓  SQL query
 [SQLite Database - visiontrack.db]
 ```
 
-### مثال عملي — Hook للمهام
+### مثال — Hook للزيارات
 ```typescript
-// app/hooks/use-tasks.ts
-import { useConveyor } from '@/app/hooks/use-conveyor'
-import { useState, useEffect } from 'react'
-import type { Task, CreateTaskInput, UpdateTaskInput } from '@/app/types'
-
-export function useTasks() {
-  const { getTasks, createTask, updateTask, deleteTask, updateTaskStatus } = useConveyor('db')
-  const [tasks, setTasks] = useState<Task[]>([])
+// app/hooks/use-visits.ts
+export function useVisits(typeFilter?: VisitType) {
+  const { getVisits, createVisit, updateVisit, deleteVisit, updateVisitStatus } = useConveyor('db')
+  const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
     setLoading(true)
-    const data = await getTasks()
-    setTasks(data)
+    const data = await getVisits({ type: typeFilter })
+    setVisits(data)
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [typeFilter])
 
   return {
-    tasks,
+    visits,
     loading,
-    pending: tasks.filter(t => t.status === 'pending'),
-    inProgress: tasks.filter(t => t.status === 'inprogress'),
-    done: tasks.filter(t => t.status === 'done'),
-    create: async (input: CreateTaskInput) => { await createTask(input); await load() },
-    update: async (id: number, input: UpdateTaskInput) => { await updateTask(id, input); await load() },
-    remove: async (id: number) => { await deleteTask(id); await load() },
-    moveStatus: async (id: number, status: Task['status'], position: number) => {
-      await updateTaskStatus(id, status, position)
+    scheduled: visits.filter(v => v.status === 'scheduled'),
+    completed: visits.filter(v => v.status === 'completed'),
+    today: visits.filter(v => isToday(new Date(v.visit_date))),
+    create: async (input: CreateVisitInput) => { await createVisit(input); await load() },
+    update: async (id: number, input: UpdateVisitInput) => { await updateVisit(id, input); await load() },
+    remove: async (id: number) => { await deleteVisit(id); await load() },
+    changeStatus: async (id: number, status: Visit['status'], resolutionNotes?: string) => {
+      await updateVisitStatus(id, status, resolutionNotes)
       await load()
     }
   }
 }
 ```
 
+### مثال — Hook للمهام مع الأرشفة
+```typescript
+// app/hooks/use-tasks.ts
+export function useTasks() {
+  const conveyor = useConveyor('db')
+  const [tasks, setTasks] = useState<Task[]>([])
+
+  const load = async () => {
+    // يجلب فقط المهام غير المؤرشفة
+    const data = await conveyor.getActiveTasks()
+    setTasks(data)
+  }
+
+  return {
+    tasks,
+    pending:    tasks.filter(t => t.status === 'pending'),
+    inProgress: tasks.filter(t => t.status === 'inprogress'),
+    // Done يعرض آخر 7 أيام فقط
+    done: tasks.filter(t =>
+      t.status === 'done' &&
+      differenceInDays(new Date(), new Date(t.updated_at)) <= 7
+    ),
+    ...
+  }
+}
+```
+
 ---
 
-## 🧩 المكونات المشتركة (Shared Components)
+## 🧩 المكونات المشتركة
 
-### 1. `Sidebar.tsx` — شريط التنقل الجانبي
-
+### 1. `Sidebar.tsx`
 ```
+عناصر القائمة:
+  icon: LayoutDashboard  label: 'لوحة التحكم'    path: '/'
+  icon: CheckSquare      label: 'المهام'           path: '/tasks'
+  icon: Archive          label: 'أرشيف المهام'     path: '/tasks/archive'
+  icon: FileText         label: 'الملاحظات'        path: '/notes'
+  icon: Archive          label: 'أرشيف الملاحظات'  path: '/notes/archive'
+  icon: Calendar         label: 'الزيارات'         path: '/visits'
+  icon: Users            label: 'العملاء'           path: '/clients'
+  icon: HardHat          label: 'الفنيون'           path: '/technicians'
+  icon: Phone            label: 'سجل الاتصالات'    path: '/calls'
+  --- فاصل ---
+  icon: Settings         label: 'الإعدادات'         path: '/settings'
+
 التصميم:
-- عرض: 220px ثابت
-- الخلفية: var(--color-sidebar-bg) — #0D1117
-- الحدود: border-left: 1px solid var(--color-border)  (لأن RTL)
-- يظهر على اليمين دائماً
-- في الأعلى: Logo + اسم التطبيق "VisionTrack"
-- قائمة التنقل في الوسط
-- في الأسفل: الإعدادات + اسم المستخدم
-
-عناصر القائمة (nav items):
-{
-  icon: LayoutDashboard,  label: 'لوحة التحكم',  path: '/'
-  icon: CheckSquare,      label: 'المهام',         path: '/tasks'
-  icon: FileText,         label: 'الملاحظات',      path: '/notes'
-  icon: Wrench,           label: 'الصيانة',         path: '/maintenance'
-  icon: Users,            label: 'العملاء',          path: '/clients'
-  icon: Calendar,         label: 'الزيارات',        path: '/visits'
-  icon: HardHat,          label: 'الفنيون',          path: '/technicians'
-  icon: Phone,            label: 'سجل الاتصالات',   path: '/calls'
-}
-
-Active state: خلفية var(--color-brand) مع border-radius وبرودة خط بارز على اليسار
-Hover state: خلفية var(--color-bg-hover) انتقال سلس 150ms
+- عرض 220px ثابت على اليمين
+- الخلفية: var(--color-sidebar-bg)
+- في الأعلى: شعار VisionTrack
+- Active: خلفية var(--color-brand) مع border-radius
+- أرشيف المهام والملاحظات: indent بمقدار 12px تحت المهام/الملاحظات
+  وبخط أصغر لتوضيح أنها فرع
 ```
 
-### 2. `KanbanBoard.tsx` + `KanbanColumn.tsx` + `KanbanCard.tsx`
-
+### 2. `KanbanBoard.tsx` / `KanbanColumn.tsx` / `KanbanCard.tsx`
 ```
-الهيكل:
-<KanbanBoard>
-  ├── <KanbanColumn status="pending" title="معلقة" color="amber">
-  │     ├── <KanbanCard item={...} />
-  │     ├── <KanbanCard item={...} />
-  │     └── [+ إضافة بطاقة]
-  ├── <KanbanColumn status="inprogress" title="جارية" color="blue">
-  └── <KanbanColumn status="done" title="مكتملة" color="green">
-
-تصميم Column:
-- عرض: flex-1 (يملأ المساحة بالتساوي)
-- الرأس: اسم العمود + عدد البطاقات badge
-- الخلفية: var(--color-bg-surface) مع border رفيع
-- border-top ملون حسب الحالة (amber/blue/green)
-
-تصميم KanbanCard:
-- خلفية: var(--color-bg-elevated)
-- hover: رفع طفيف بـ transform translateY(-2px)
-- يظهر: العنوان + الأولوية badge + التاريخ
-- Drag handle: أيقونة GripVertical على اليسار
-- عند السحب: opacity 50% + rotate(2deg) + shadow
-
 dnd-kit setup:
 - DndContext يحيط بـ KanbanBoard
-- كل column هي droppable zone
-- كل card هي draggable item
-- onDragEnd: تحديد الـ column الجديد واستدعاء moveStatus()
+- كل column هي Droppable
+- كل card هي Draggable
+- onDragEnd → يحدد الـ column الجديد → يستدعي moveStatus()
+
+تصميم KanbanCard:
+- الخلفية: var(--color-bg-elevated)
+- hover: translateY(-2px) انتقال 150ms
+- يعرض:
+    ⠿ drag handle (GripVertical icon)
+    عنوان المهمة/الملاحظة
+    وصف مختصر (2 سطر max, text-ellipsis)
+    [أولوية badge]  [created_at relative]  [due_date إن وجد]
+    قائمة ··· (تعديل / حذف)
+- عند السحب: opacity:0.5 + rotate(1.5deg)
 ```
 
-### 3. `StatusBadge.tsx`
-
+### 3. `VisitTypeBadge.tsx`
 ```typescript
-// Props: status: 'pending' | 'inprogress' | 'done' | 'new' | 'resolved' | ...
-// تعيد pill صغير ملون حسب الحالة
 const configs = {
-  pending:    { label: 'معلق',     bg: 'bg-amber-500/15',  text: 'text-amber-400'  },
-  inprogress: { label: 'جارٍ',     bg: 'bg-blue-500/15',   text: 'text-blue-400'   },
-  done:       { label: 'مكتمل',   bg: 'bg-green-500/15',  text: 'text-green-400'  },
-  urgent:     { label: 'عاجل',     bg: 'bg-red-500/15',    text: 'text-red-400'    },
-  new:        { label: 'جديد',     bg: 'bg-sky-500/15',    text: 'text-sky-400'    },
-  resolved:   { label: 'محلول',   bg: 'bg-emerald-500/15',text: 'text-emerald-400'},
+  installation: { label: 'تركيب',       color: 'var(--color-installation)', icon: Hammer    },
+  maintenance:  { label: 'صيانة',        color: 'var(--color-maintenance)',  icon: Wrench    },
+  survey:       { label: 'مسح ميداني',  color: 'var(--color-survey)',       icon: MapPin    },
+  followup:     { label: 'متابعة',       color: 'var(--color-followup)',     icon: RefreshCw },
 }
 ```
 
-### 4. `FormModal.tsx` — نافذة الإضافة/التعديل
-
+### 4. `StatusBadge.tsx`
+```typescript
+const configs = {
+  pending:    { label: 'معلق',      bg: 'bg-amber-500/15',   text: 'text-amber-400'   },
+  inprogress: { label: 'جارٍ',      bg: 'bg-blue-500/15',    text: 'text-blue-400'    },
+  done:       { label: 'مكتمل',    bg: 'bg-green-500/15',   text: 'text-green-400'   },
+  scheduled:  { label: 'مجدولة',   bg: 'bg-sky-500/15',     text: 'text-sky-400'     },
+  completed:  { label: 'مكتملة',   bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+  cancelled:  { label: 'ملغاة',    bg: 'bg-red-500/15',     text: 'text-red-400'     },
+  postponed:  { label: 'مؤجلة',    bg: 'bg-orange-500/15',  text: 'text-orange-400'  },
+  urgent:     { label: 'عاجل',      bg: 'bg-red-500/15',     text: 'text-red-400'     },
+}
 ```
-تصميم:
-- Modal يظهر في المنتصف مع overlay داكن
-- الرأس: عنوان النموذج + زر X للإغلاق
+
+### 5. `FormModal.tsx`
+```
+- Modal في المنتصف مع overlay داكن
+- انتقال: scale(0.95)→scale(1) مع opacity (framer-motion)
+- الرأس: عنوان + زر X
 - المحتوى: slots للـ form fields
 - الأسفل: [إلغاء] [حفظ]
-- انتقال: scale(0.95) → scale(1) مع opacity عند الظهور (framer-motion)
 - عرض: max-w-lg
-```
-
-### 5. `PageHeader.tsx`
-
-```
-يستقبل:
-- title: string — عنوان الصفحة
-- description?: string — وصف مختصر
-- action?: ReactNode — زر الإضافة أو أي action
-
-التصميم:
-- صف أفقي: العنوان على اليمين، الـ action على اليسار
-- خط فاصل تحته
-- العنوان: text-xl font-semibold
-- الوصف: text-sm text-muted
 ```
 
 ---
@@ -505,369 +529,315 @@ const configs = {
 ---
 
 ### صفحة 1: Dashboard — لوحة التحكم
-
 **المسار**: `/`
 
-**الهدف**: أول ما يراه المستخدم صباحاً — ملخص سريع لكل شيء.
-
-**تخطيط الصفحة**:
 ```
 ┌─────────────────────────────────────────────────────┐
-│  📊 لوحة التحكم          السبت، 10 مايو 2026       │
+│  📊 لوحة التحكم          الثلاثاء، 20 مايو 2026    │
 ├─────────────────────────────────────────────────────┤
-│                                                      │
-│  [طلبات مفتوحة] [زيارات اليوم] [عملاء جدد] [مهام]  │
-│     stat card      stat card    stat card  stat card │
-│                                                      │
+│ [زيارات اليوم]  [صيانة مجدولة]  [مهام معلقة]  [عملاء]│
+│   stat card       stat card       stat card   stat  │
 ├──────────────────────┬──────────────────────────────┤
-│                      │                              │
-│  الطلبات الأسبوعية   │  أحدث بلاغات الصيانة        │
-│  [Bar Chart]         │  [قائمة 5 بلاغات]            │
-│                      │                              │
+│  الزيارات الأسبوعية  │  زيارات اليوم                │
+│  [Bar Chart]         │  [قائمة مرتبة بالوقت]        │
 ├──────────────────────┼──────────────────────────────┤
-│                      │                              │
-│  زيارات اليوم        │  مهام معلقة (أولى 5)         │
-│  [قائمة بالفنيين]    │  [قائمة مع أولوية]           │
-│                      │                              │
+│  مهام عاجلة (أولى 5) │  آخر اتصالات تحتاج متابعة   │
+│  [قائمة]             │  [قائمة]                     │
 └──────────────────────┴──────────────────────────────┘
 ```
 
-**Stat Cards** (4 بطاقات في صف):
-- كل بطاقة: رقم كبير + عنوان + أيقونة + تغيير مقارنة بالأسبوع الماضي
-- ألوان: brand/amber/green/purple لكل بطاقة
-- انيميشن: الأرقام تعدّ من 0 إلى القيمة عند التحميل (counter animation)
-
-**البيانات المطلوبة** (من قاعدة البيانات):
+**البيانات المطلوبة**:
 ```typescript
 interface DashboardData {
-  openMaintenanceCount: number     // maintenance_requests WHERE status != 'closed'
-  todayVisitsCount: number         // visits WHERE visit_date = today
-  newClientsThisWeek: number       // clients WHERE created_at >= 7 days ago
-  pendingTasksCount: number        // tasks WHERE status != 'done'
-  weeklyMaintenanceChart: { day: string; count: number }[]
-  recentMaintenance: MaintenanceRequest[]  // آخر 5
-  todayVisits: Visit[]             // زيارات اليوم مع الفني
-  urgentTasks: Task[]              // المهام العاجلة أولى 5
+  todayVisitsCount: number
+  scheduledMaintenanceCount: number   // visits WHERE type='maintenance' AND status='scheduled'
+  pendingTasksCount: number
+  totalClientsCount: number
+  weeklyVisitsChart: { day: string; count: number; type: VisitType }[]
+  todayVisits: Visit[]
+  urgentTasks: Task[]
+  pendingFollowupCalls: CallLog[]     // requires_followup=1 AND followup_done=0
 }
 ```
+
+**Stat Cards**: أرقام تعدّ من 0 عند التحميل (counter animation بـ framer-motion)
 
 ---
 
 ### صفحة 2: Tasks — المهام
-
 **المسار**: `/tasks`
 
-**الهدف**: Kanban board لإدارة المهام اليومية والأسبوعية.
-
-**تخطيط الصفحة**:
 ```
 ┌─────────────────────────────────────────────────────┐
-│  ✅ المهام                    [+ مهمة جديدة]        │
+│  ✅ المهام                       [+ مهمة جديدة]    │
 ├─────────────────────────────────────────────────────┤
-│ [بحث سريع...] [فلتر: الأولوية ▼] [فلتر: التاريخ ▼] │
-├────────────────┬────────────────┬───────────────────┤
-│   معلقة  (3)  │  جارية   (2)  │  مكتملة   (8)    │
-│  ─────────── │  ─────────── │  ─────────────── │
-│  [بطاقة]     │  [بطاقة]     │  [بطاقة]          │
-│  [بطاقة]     │  [بطاقة]     │  [بطاقة]          │
-│  [بطاقة]     │              │  [بطاقة]          │
-│  [+ إضافة]   │  [+ إضافة]   │                   │
-└────────────────┴────────────────┴───────────────────┘
+│  [بحث...]  [الأولوية ▼]  [📁 الأرشيف ←]            │
+├────────────────┬───────────────┬────────────────────┤
+│  معلقة   (3)  │  جارية  (2)  │  مكتملة   (5)      │
+│  ──────────── │  ──────────── │  ────────────────  │
+│  [بطاقة]      │  [بطاقة]      │  [بطاقة]            │
+│  [+ إضافة]    │  [+ إضافة]    │                    │
+└────────────────┴───────────────┴────────────────────┘
 ```
 
-**بطاقة المهمة (KanbanCard)**:
-```
-┌─────────────────────────────┐
-│ ⠿  عنوان المهمة             │  ← drag handle + عنوان
-│    وصف مختصر للمهمة...       │
-│                              │
-│  [🔴 عاجل]    📅 12 مايو    │  ← priority badge + تاريخ
-│                [···]         │  ← قائمة خيارات (تعديل/حذف)
-└─────────────────────────────┘
-```
-
-**نموذج إضافة/تعديل مهمة**:
-```
-الحقول:
-- العنوان*: input text
-- الوصف: textarea
-- الأولوية*: select (منخفضة | متوسطة | عالية | عاجلة)
-- تاريخ الاستحقاق: date picker
-```
-
----
-
-### صفحة 3: Notes — الملاحظات
-
-**المسار**: `/notes`
-
-**الهدف**: Kanban board للملاحظات — ملاحظات العمل، التعليمات، المعلومات المهمة.
-
-**مطابق لصفحة المهام في البنية** مع فروق:
-- بطاقة الملاحظة تُظهر محتوى أطول (3 أسطر)
-- يمكن اختيار لون للبطاقة (6 ألوان مختلفة)
-- لا يوجد حقل "أولوية" بل "لون" فقط
-
----
-
-### صفحة 4: Maintenance — الصيانة
-
-**المسار**: `/maintenance`
-
-**الهدف**: تتبع بلاغات الصيانة من الفتح حتى الإغلاق.
-
-**تخطيط الصفحة**:
-```
-┌─────────────────────────────────────────────────────┐
-│  🔧 الصيانة                  [+ بلاغ جديد]          │
-├─────────────────────────────────────────────────────┤
-│ [بحث...] [الحالة ▼] [الأولوية ▼] [الفني ▼] [تاريخ] │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  جديد (4)    جارٍ (2)    انتظار (1)    محلول (8)   │ ← Tabs أو فلتر سريع
-│                                                      │
-│  ┌─────────────────────────────────────────────┐   │
-│  │ 🔴 أحمد العمري              [عاجل] [جارٍ]   │   │
-│  │    كاميرا لا تعمل — نظام Hikvision           │   │
-│  │    📅 12 مايو  👷 محمد (الفني)    ⋯ خيارات  │   │
-│  └─────────────────────────────────────────────┘   │
-│  (تكرر للبطاقات الأخرى...)                          │
-│                                                      │
-└─────────────────────────────────────────────────────┘
-```
-
-**بطاقة البلاغ** (List view — ليس Kanban):
-```
-┌─────────────────────────────────────────────────────────┐
-│  [أيقونة المشكلة]  اسم العميل           [أولوية] [حالة] │
-│                    نوع المشكلة + وصف مختصر              │
-│                    📅 تاريخ البلاغ  👷 اسم الفني  ✎ ✕  │
-└─────────────────────────────────────────────────────────┘
-```
-
-**نموذج بلاغ جديد** (FormModal):
-```
-الحقول:
-- العميل*: Combobox يبحث في جدول clients (أو إدخال يدوي)
-- اسم العميل*: auto-fill أو يدوي
-- رقم الهاتف*: auto-fill أو يدوي
-- نوع المشكلة*: select
-    (كاميرا | DVR/NVR | أسلاك | طاقة | برمجة | أخرى)
-- وصف المشكلة: textarea
-- الأولوية*: select (منخفضة | متوسطة | عالية | عاجلة)
-- الفني المسؤول: select من جدول technicians
-- موعد الزيارة: date + time picker
-```
-
-**تغيير الحالة** (inline):
-- زر صغير بجانب كل بطاقة يفتح dropdown لتغيير الحالة مباشرة
-- عند الإغلاق: يُطلب ملاحظة الحل (resolution_notes)
-
----
-
-### صفحة 5: Clients — العملاء
-
-**المسار**: `/clients`
-
-**الهدف**: قاعدة بيانات العملاء مع خط مبيعات بسيط.
-
-**تخطيط الصفحة** (Tabs):
-```
-┌─────────────────────────────────────────────────────┐
-│  👥 العملاء                  [+ عميل جديد]  [تصدير] │
-├─────────────────────────────────────────────────────┤
-│ [بحث عن عميل...]           [الحالة ▼] [المدينة ▼]  │
-├─────────────────────────────────────────────────────┤
-│  [جميع العملاء]  [محتملون]  [نشطون]  [غير نشطين]  │  ← Tabs
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌──────────────────────────────────────────────┐  │
-│  │ 👤 اسم العميل  |  📞 رقم  |  📍 المدينة     │  │
-│  │    نوع الكاميرا/النظام   |  [نشط] |  ✎  ✕  │  │
-│  └──────────────────────────────────────────────┘  │
-│  (تكرر...)                                          │
-└─────────────────────────────────────────────────────┘
-```
-
-**ملف العميل** (Drawer يفتح من اليسار عند النقر على العميل):
+**بطاقة المهمة**:
 ```
 ┌──────────────────────────────┐
-│  ✕  ملف العميل               │
-│  ─────────────────────────  │
-│  👤  أحمد العمري             │
-│  📞  0922-XXX-XXX            │
-│  📍  الزاوية، ليبيا           │
-│  📷  Hikvision IP 4CH        │
-│                              │
-│  ─── سجل الصيانة ───         │
-│  [قائمة بلاغات هذا العميل]   │
-│                              │
-│  ─── سجل الزيارات ───        │
-│  [قائمة زيارات هذا العميل]   │
+│ ⠿  عنوان المهمة               │
+│    وصف مختصر (2 سطر max)...   │
+│                               │
+│  [🔴 عاجل]  منذ 3 أيام  ···  │
 └──────────────────────────────┘
 ```
 
-**تصدير Excel**: زر يصدر جدول العملاء المفلترة بصيغة .xlsx
+**نموذج مهمة جديدة**:
+```
+- العنوان*
+- الوصف
+- الأولوية*: (منخفضة | متوسطة | عالية | عاجلة)
+- تاريخ الاستحقاق
+```
+
+---
+
+### صفحة 3: TaskArchive — أرشيف المهام
+**المسار**: `/tasks/archive`
+
+```
+┌─────────────────────────────────────────────────────┐
+│  📁 أرشيف المهام                [← العودة للمهام]   │
+├─────────────────────────────────────────────────────┤
+│  [هذا الأسبوع] [هذا الشهر] [3 أشهر] [كل الوقت]    │
+│  من [__/__/__] إلى [__/__/__]    [بحث بالعنوان...]  │
+├─────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────┐  │
+│  │ ✓  عنوان المهمة    [مكتمل]  أُنشئت: 2 مايو  │  │
+│  │    وصف مختصر...              أُنجزت: 8 مايو  │  │
+│  └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+**الفلترة في SQL**:
+```sql
+SELECT * FROM tasks
+WHERE archived_at IS NOT NULL
+AND created_at >= ?   -- حسب الفلتر المختار
+ORDER BY archived_at DESC
+```
+
+---
+
+### صفحة 4: Notes — الملاحظات
+**المسار**: `/notes`
+
+مطابقة لصفحة المهام في البنية مع فروق:
+- البطاقة تعرض محتوى أطول (3 أسطر)
+- يمكن اختيار لون للبطاقة من 6 ألوان
+- لا يوجد حقل "أولوية"
+
+---
+
+### صفحة 5: NoteArchive — أرشيف الملاحظات
+**المسار**: `/notes/archive`
+مطابقة تماماً لصفحة أرشيف المهام.
+
+---
+
+### صفحة 6: Visits — الزيارات الميدانية ⭐ الصفحة الرئيسية
+**المسار**: `/visits`
+
+**هذه الصفحة تجمع كل أنواع الزيارات في مكان واحد مع tabs للتصفية.**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  📅 الزيارات                    [+ زيارة جديدة]     │
+├─────────────────────────────────────────────────────┤
+│ [الكل] [تركيب 🔨] [صيانة 🔧] [مسح ميداني 📍] [متابعة 🔄]│
+├─────────────────────────────────────────────────────┤
+│ [بحث باسم العميل...]  [الحالة ▼]  [الفني ▼]  [تاريخ]│
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│  اليوم — الثلاثاء 20 مايو (3 زيارات)               │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ ⏰ 09:00 │ [🔨 تركيب]  │ أحمد العمري        │  │
+│  │          │             │ محمد الفني  [مجدولة]│  │
+│  │          │  📍 شارع الجمهورية، بنغازي   ···  │  │
+│  └──────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ ⏰ 11:30 │ [🔧 صيانة]  │ خالد البشير        │  │
+│  │          │ كاميرا لا تعمل  │ علي  [🔴 عاجل] │  │
+│  │          │  📍 حي السلماني              ···  │  │
+│  └──────────────────────────────────────────────┘  │
+│                                                      │
+│  الغد — الأربعاء 21 مايو (1 زيارة)                 │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ ⏰ 10:00 │ [📍 مسح]    │ شركة النور          │  │
+│  │          │ تقدير 8 كاميرات │ أحمد  [مجدولة] │  │
+│  │          │  📍 المنطقة الصناعية          ···  │  │
+│  └──────────────────────────────────────────────┘  │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+**بطاقة الزيارة** تعرض معلومات مختلفة حسب النوع:
+```
+تركيب:      [نوع الزيارة] اسم العميل | عدد الكاميرات + نوع النظام | الفني | الحالة
+صيانة:      [نوع الزيارة] اسم العميل | نوع المشكلة + الأولوية     | الفني | الحالة
+مسح ميداني: [نوع الزيارة] اسم العميل | الهدف من المسح              | الفني | الحالة
+متابعة:     [نوع الزيارة] اسم العميل | ملاحظة مختصرة               | الفني | الحالة
+```
+
+**نموذج زيارة جديدة** — يتغير حسب النوع المختار:
+
+```
+الحقول الثابتة (لجميع الأنواع):
+  - نوع الزيارة*: (تركيب | صيانة | مسح ميداني | متابعة)
+  - العميل: Combobox يبحث في جدول clients أو إدخال يدوي
+  - اسم العميل*: auto-fill أو يدوي
+  - رقم الهاتف*: auto-fill أو يدوي
+  - العنوان: auto-fill أو يدوي
+  - الفني*: select من جدول technicians
+  - التاريخ*: date picker
+  - الوقت: time picker
+  - ملاحظات
+
+حقول إضافية لـ "تركيب":
+  - عدد الكاميرات
+  - نوع النظام: (DVR | NVR | IP | Hybrid)
+
+حقول إضافية لـ "صيانة":
+  - نوع المشكلة*: (كاميرا | DVR/NVR | أسلاك | طاقة | برمجة | أخرى)
+  - وصف المشكلة
+  - الأولوية*: (منخفضة | متوسطة | عالية | عاجلة)
+
+حقول إضافية لـ "مسح ميداني":
+  - عدد الكاميرات المقدّر
+  - نوع النظام المقترح
+```
+
+**تغيير الحالة**:
+- كل بطاقة فيها زر حالة inline → dropdown: (مجدولة | مكتملة | ملغاة | مؤجلة)
+- عند اختيار "مكتملة": يظهر textarea لإدخال `resolution_notes`
+
+---
+
+### صفحة 7: Clients — العملاء (مبسّطة)
+**المسار**: `/clients`
+
+**الهدف**: دفتر عناوين بسيط للربط السريع مع الزيارات.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  👥 العملاء                      [+ عميل جديد]      │
+├─────────────────────────────────────────────────────┤
+│  [بحث باسم أو رقم هاتف...]                          │
+├─────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────┐  │
+│  │ 👤 أحمد العمري   │ 📞 0922-XXX-XXX   ✎  ✕  │  │
+│  │    📍 شارع الجمهورية، بنغازي                 │  │
+│  │    📝 عميل قديم، نظام Hikvision 8 كاميرا    │  │
+│  └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
 
 **نموذج عميل جديد**:
 ```
-الحقول:
 - الاسم*
 - رقم الهاتف*
 - العنوان
-- المدينة
-- نوع الكاميرا (Hikvision | Dahua | CP Plus | أخرى)
-- نوع النظام (DVR | NVR | IP Cameras | Hybrid)
-- الحالة (نشط | محتمل | غير نشط)
-- ملاحظات
+- ملاحظات (نوع النظام، تفاصيل مهمة...)
 ```
+
+**ملاحظة مهمة**: عند إضافة زيارة جديدة، يمكن البحث عن العميل من هذا الجدول مباشرة عبر Combobox في نموذج الزيارة للـ auto-fill.
 
 ---
 
-### صفحة 6: Visits — الزيارات الميدانية
-
-**المسار**: `/visits`
-
-**الهدف**: جدولة ومتابعة زيارات التركيب والصيانة.
-
-**تخطيط الصفحة**:
-```
-┌─────────────────────────────────────────────────────┐
-│  📅 الزيارات                   [+ زيارة جديدة]      │
-├─────────────────────────────────────────────────────┤
-│  [◀ الأسبوع السابق]  الأسبوع: 5-11 مايو  [▶]        │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  اليوم (3 زيارات)  ← مُبرز بإطار خاص               │
-│  ┌────────────────────────────────────────────┐    │
-│  │ ⏰ 09:00  │ أحمد العمري - تركيب  │ محمد 🟢│    │
-│  │ ⏰ 11:30  │ خالد البشير - صيانة  │ علي  🟡│    │
-│  │ ⏰ 14:00  │ سالم النوير - تفقد   │ محمد 🟢│    │
-│  └────────────────────────────────────────────┘    │
-│                                                      │
-│  الغد (1 زيارة)                                     │
-│  ┌────────────────────────────────────────────┐    │
-│  │ ⏰ 10:00  │ عمر السعيد - تثبيت   │ علي  🟡│    │
-│  └────────────────────────────────────────────┘    │
-│                                                      │
-└─────────────────────────────────────────────────────┘
-```
-
-**نموذج زيارة جديدة**:
-```
-الحقول:
-- العميل: Combobox أو يدوي
-- العنوان: auto-fill أو يدوي
-- الفني*: select من جدول technicians
-- نوع الزيارة*: (تركيب | صيانة | تفقد | متابعة)
-- التاريخ*: date picker
-- الوقت: time picker
-- ملاحظات
-```
-
----
-
-### صفحة 7: Technicians — الفنيون
-
+### صفحة 8: Technicians — الفنيون
 **المسار**: `/technicians`
 
-**الهدف**: إدارة فريق الفنيين ومتابعة حالتهم.
-
-**تخطيط الصفحة**:
 ```
 ┌─────────────────────────────────────────────────────┐
-│  👷 الفنيون                    [+ فني جديد]          │
+│  👷 الفنيون                      [+ فني جديد]       │
 ├─────────────────────────────────────────────────────┤
-│                                                      │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
 │  │    👤    │  │    👤    │  │    👤    │          │
 │  │  محمد    │  │   علي    │  │  أحمد    │          │
-│  │ تركيب   │  │  صيانة   │  │  برمجة   │          │
+│  │  تركيب  │  │  صيانة   │  │  برمجة   │          │
 │  │ [🟢 متاح]│  │[🟡 مشغول]│  │[🟢 متاح] │          │
 │  │ 📞 ...   │  │ 📞 ...   │  │ 📞 ...   │          │
-│  │ [تعديل] │  │ [تعديل] │  │ [تعديل] │          │
+│  │ زيارات اليوم: 2│ زيارات اليوم: 1│ 0    │          │
 │  └──────────┘  └──────────┘  └──────────┘          │
-│                                                      │
 └─────────────────────────────────────────────────────┘
 ```
 
-**Cards Grid** (3 columns):
-- كل بطاقة: صورة افتراضية (initial) + اسم + تخصص + حالة + هاتف
-- تغيير الحالة: select مباشر على البطاقة
-- إحصاء: عدد المهام المسندة اليوم/الأسبوع
+**البطاقة تعرض**:
+- الحرف الأول من الاسم كـ avatar مع لون فريد
+- الاسم + التخصص
+- الحالة: select مباشر على البطاقة للتغيير السريع
+- عدد زيارات اليوم (من جدول visits)
+- رقم الهاتف
+
+**نموذج فني جديد**:
+```
+- الاسم*
+- رقم الهاتف*
+- التخصص: (تركيب | صيانة | برمجة | الكل)
+- ملاحظات
+```
 
 ---
 
-### صفحة 8: CallLog — سجل الاتصالات
-
+### صفحة 9: CallLog — سجل الاتصالات
 **المسار**: `/calls`
 
-**الهدف**: توثيق المكالمات والتواصل مع العملاء والشركة.
-
-**تخطيط الصفحة**:
 ```
 ┌─────────────────────────────────────────────────────┐
-│  📞 سجل الاتصالات              [+ تسجيل اتصال]      │
+│  📞 سجل الاتصالات               [+ تسجيل اتصال]    │
 ├─────────────────────────────────────────────────────┤
-│ [بحث...] [النوع ▼] [الاتجاه ▼] [تحتاج متابعة فقط] │
+│  [بحث...]  [النوع ▼]  [الاتجاه ▼]  [⚠️ تحتاج متابعة]│
 ├─────────────────────────────────────────────────────┤
-│                                                      │
-│  السبت، 10 مايو 2026                                │
-│  ┌────────────────────────────────────────────┐    │
-│  │ 📞↗  الشركة الأم - أبوبكر    11:30 ص       │    │
-│  │    موضوع: استفسار عن الشحنة القادمة         │    │
-│  │    ✅ تم الاتفاق على التسليم يوم الخميس     │    │
-│  │    [🔔 تذكير: الخميس]              ✎  ✕    │    │
-│  └────────────────────────────────────────────┘    │
-│  ┌────────────────────────────────────────────┐    │
-│  │ 📞↙  عميل - خالد البشير     10:00 ص        │    │
-│  │    موضوع: استفسار عن أسعار الكاميرات        │    │
-│  │    تم إرسال عرض السعر                       │    │
-│  │    [⚠️ يحتاج متابعة: 15 مايو]     ✎  ✕    │    │
-│  └────────────────────────────────────────────┘    │
-│                                                      │
+│  الثلاثاء، 20 مايو 2026                             │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ 📞↗  الشركة الأم  11:30 ص                   │  │
+│  │    موضوع: الشحنة القادمة                      │  │
+│  │    ملخص: تسليم الخميس القادم                  │  │
+│  │    [🔔 متابعة: الخميس]              ✎  ✕    │  │
+│  └──────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
 
 **نموذج تسجيل اتصال**:
 ```
-الحقول:
 - اسم جهة الاتصال*
 - نوع جهة الاتصال*: (عميل | الشركة | مورد | أخرى)
 - رقم الهاتف
-- اتجاه الاتصال*: (وارد | صادر)
+- الاتجاه*: (وارد ↙ | صادر ↗)
 - الموضوع*
 - ملخص المحادثة
-- يحتاج متابعة؟: checkbox
-  - إذا نعم → تاريخ المتابعة: date picker
+- يحتاج متابعة؟ checkbox
+    إذا نعم → تاريخ المتابعة: date picker
 ```
 
 ---
 
-### صفحة 9: Settings — الإعدادات
-
+### صفحة 10: Settings — الإعدادات
 **المسار**: `/settings`
 
-**الهدف**: إعدادات التطبيق العامة.
-
-**الأقسام**:
 ```
+الأقسام:
 1. معلومات المحل
    - اسم المحل، العنوان، رقم الهاتف
-   - اسم الوكيل (لأغراض الطباعة مستقبلاً)
 
 2. الإعدادات العامة
    - المظهر: [داكن] [فاتح] [تلقائي]
-   - اللغة: العربية (ثابت الآن)
 
 3. قاعدة البيانات
-   - مسار ملف قاعدة البيانات (readonly للعرض)
-   - زر [نسخ احتياطي الآن] ← يحفظ نسخة .db بتاريخ اليوم
-   - زر [استعادة من نسخة احتياطية]
+   - مسار ملف DB (readonly)
+   - [نسخ احتياطي الآن] ← يحفظ نسخة .db بتاريخ اليوم
+   - [استعادة من نسخة احتياطية]
 
 4. عن التطبيق
    - الإصدار: v1.0.0
-   - المطور: [اسمك]
 ```
 
 ---
@@ -876,79 +846,119 @@ interface DashboardData {
 
 ### الخطوة 1: تهيئة المشروع
 ```bash
-# القالب جاهز، ثبّت الحزم الإضافية فقط
 npm install better-sqlite3 @types/better-sqlite3
 npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
-npm install zustand recharts date-fns xlsx
+npm install zustand recharts date-fns
 npm install react-router-dom @types/react-router-dom
 ```
 
-### الخطوة 2: قاعدة البيانات أولاً
-1. أنشئ `lib/database/db.ts` — الاتصال وتحديد المسار
-2. أنشئ `lib/database/migrations.ts` — الجداول كلها
-3. أنشئ `lib/database/repositories/` — ملف لكل جدول
+### الخطوة 2: قاعدة البيانات
+1. `lib/database/db.ts` — الاتصال + مسار الملف
+2. `lib/database/migrations.ts` — إنشاء الجداول
+3. `lib/database/repositories/` — ملف لكل جدول
 
 ### الخطوة 3: طبقة Conveyor
-1. أضف schemas في `lib/conveyor/schemas/db-schema.ts`
-2. أضف API methods في `lib/conveyor/api/db-api.ts`
-3. أضف handlers في `lib/conveyor/handlers/db-handler.ts`
+1. `lib/conveyor/schemas/db-schema.ts`
+2. `lib/conveyor/api/db-api.ts`
+3. `lib/conveyor/handlers/db-handler.ts`
 4. سجّل الـ handlers في `lib/main/app.ts`
+5. أضف منطق الأرشفة التلقائية هنا (يُشغَّل عند بدء التطبيق)
 
 ### الخطوة 4: Types والـ Store
-1. عرّف كل الـ interfaces في `app/types/`
-2. أنشئ Zustand stores في `app/store/`
+```typescript
+// app/types/visit.types.ts
+export type VisitType = 'installation' | 'maintenance' | 'survey' | 'followup'
+export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'postponed'
+
+export interface Visit {
+  id: number
+  client_id?: number
+  client_name: string
+  client_phone: string
+  client_address?: string
+  visit_type: VisitType
+  visit_date: string
+  visit_time?: string
+  technician_id?: number
+  technician_name?: string
+  status: VisitStatus
+  // حقول اختيارية حسب النوع
+  problem_type?: string
+  problem_desc?: string
+  camera_count?: number
+  system_type?: string
+  priority?: string
+  notes?: string
+  resolution_notes?: string
+  created_at: string
+  updated_at: string
+}
+```
 
 ### الخطوة 5: المكونات المشتركة
-بالترتيب: Sidebar → KanbanBoard → KanbanCard → StatusBadge → FormModal
+Sidebar → KanbanBoard → KanbanCard → StatusBadge → VisitTypeBadge → FormModal
 
 ### الخطوة 6: الصفحات
-بالترتيب: Dashboard → Tasks → Notes → Maintenance → Clients → Visits → Technicians → CallLog → Settings
+Dashboard → Tasks → TaskArchive → Notes → NoteArchive → Visits → Clients → Technicians → CallLog → Settings
 
 ### الخطوة 7: Router
 ```typescript
-// app/App.tsx
-import { HashRouter, Routes, Route } from 'react-router-dom'
-// HashRouter يعمل بشكل أفضل مع Electron (لا يحتاج server)
+// app/App.tsx — HashRouter أفضل مع Electron
+<HashRouter>
+  <Routes>
+    <Route path="/" element={<Dashboard />} />
+    <Route path="/tasks" element={<Tasks />} />
+    <Route path="/tasks/archive" element={<TaskArchive />} />
+    <Route path="/notes" element={<Notes />} />
+    <Route path="/notes/archive" element={<NoteArchive />} />
+    <Route path="/visits" element={<Visits />} />
+    <Route path="/clients" element={<Clients />} />
+    <Route path="/technicians" element={<Technicians />} />
+    <Route path="/calls" element={<CallLog />} />
+    <Route path="/settings" element={<Settings />} />
+  </Routes>
+</HashRouter>
 ```
 
 ---
 
-## ⚠️ قواعد مهمة يجب الالتزام بها
+## ⚠️ قواعد مهمة
 
-1. **كل قراءة/كتابة من SQLite** يجب أن تمر عبر Conveyor — لا تتصل بـ SQLite مباشرة من الـ renderer
-2. **RTL بالكامل** — كل div يحتاج `dir="rtl"` أو ضعها على الـ `<html>`
-3. **استخدم Shadcn components** قدر الإمكان — Dialog, Select, Input, Badge, Button, etc.
+1. **كل قراءة/كتابة SQLite** تمر عبر Conveyor فقط
+2. **RTL بالكامل** — ضع `dir="rtl"` على `<html>`
+3. **استخدم Shadcn components** — Dialog, Select, Input, Badge, Button
 4. **TypeScript strict** — لا `any` إطلاقاً
-5. **كل form** يتحقق من البيانات قبل الإرسال (validation بسيطة على الأقل)
-6. **Error states** — كل fetch يعرض رسالة خطأ واضحة إذا فشل
-7. **Empty states** — كل قائمة فارغة تعرض رسالة مع أيقونة ودعوة للإضافة
-8. **Loading states** — كل جلب بيانات يعرض skeleton أو spinner
-9. **تأكيد الحذف** — استخدم ConfirmDialog قبل أي حذف
-10. **Responsive** — التطبيق يعمل على أحجام نوافذ مختلفة (min-width: 900px)
+5. **Form validation** — تحقق من الحقول المطلوبة قبل الحفظ
+6. **Error states** — رسالة واضحة عند فشل أي عملية
+7. **Empty states** — رسالة + أيقونة + زر إضافة عند القوائم الفارغة
+8. **Loading states** — skeleton أو spinner عند جلب البيانات
+9. **تأكيد الحذف** — ConfirmDialog قبل أي حذف
+10. **التواريخ** — استخدم `date-fns/ar` لعرض التواريخ بالعربية
+11. **الأرشفة التلقائية** — تُشغَّل عند بدء التطبيق بدون تدخل المستخدم
 
 ---
 
 ## 🎯 أولويات التطوير
 
 ```
-المرحلة 1 (الجوهر):
+المرحلة 1 — الجوهر:
   ✅ قاعدة البيانات + Conveyor
   ✅ Layout + Sidebar + Router
-  ✅ صفحة المهام (Kanban)
-  ✅ صفحة الملاحظات (Kanban)
+  ✅ المهام (Kanban + أرشيف)
+  ✅ الملاحظات (Kanban + أرشيف)
 
-المرحلة 2 (العمليات):
-  ✅ صفحة الصيانة
-  ✅ صفحة العملاء
-  ✅ صفحة الزيارات
-
-المرحلة 3 (التكامل):
-  ✅ لوحة التحكم (Dashboard)
+المرحلة 2 — العمليات الميدانية:
+  ✅ الزيارات (الصفحة الرئيسية الموحدة)
+  ✅ العملاء (مبسّطة)
   ✅ الفنيون
+
+المرحلة 3 — التكامل:
+  ✅ لوحة التحكم Dashboard
   ✅ سجل الاتصالات
   ✅ الإعدادات
 ```
 
 ---
 
-*VisionTrack v1.0 — نظام إدارة وكيل كاميرات المراقبة*
+*VisionTrack v1.1 — نظام إدارة وكيل كاميرات المراقبة*
+*آخر تحديث: دمج الصيانة والتركيب والمسح الميداني في صفحة الزيارات الموحدة + تبسيط صفحة العملاء + إضافة نظام الأرشفة*
