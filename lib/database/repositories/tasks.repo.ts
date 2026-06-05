@@ -17,14 +17,13 @@ export const tasksRepo = {
 
   create: (input: CreateTaskInput): Task => {
     const stmt = getDb().prepare(`
-      INSERT INTO tasks (title, description, priority, status, position, due_date)
-      VALUES (@title, @description, @priority, @status, @position, @due_date)
+      INSERT INTO tasks (title, description, status, position, due_date)
+      VALUES (@title, @description, @status, @position, @due_date)
     `);
 
     const info = stmt.run({
       title: input.title,
       description: input.description || null,
-      priority: input.priority || 'medium',
       status: input.status || 'pending',
       position: input.position || 0,
       due_date: input.due_date || null
@@ -78,9 +77,9 @@ export const tasksRepo = {
   },
 
   // جلب المهام المؤرشفة مع فلترة بالتاريخ والبحث
-  findArchived: (filter: { from?: string; to?: string; search?: string }): Task[] => {
+  findArchived: (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => {
     let query = `SELECT * FROM tasks WHERE archived_at IS NOT NULL`;
-    const params: string[] = [];
+    const params: (string | number)[] = [];
 
     if (filter.from) {
       query += ` AND created_at >= ?`;
@@ -95,7 +94,22 @@ export const tasksRepo = {
       params.push(`%${filter.search}%`);
     }
 
+    // Count Total
+    const countQuery = query.replace('SELECT *', 'SELECT count(*) as count');
+    const totalCount = (getDb().prepare(countQuery).get(...params) as { count: number }).count;
+
+    // Pagination
     query += ` ORDER BY archived_at DESC`;
-    return getDb().prepare(query).all(...params) as Task[];
+    if (filter.limit) {
+      query += ` LIMIT ?`;
+      params.push(filter.limit);
+      if (filter.page) {
+        query += ` OFFSET ?`;
+        params.push((filter.page - 1) * filter.limit);
+      }
+    }
+
+    const data = getDb().prepare(query).all(...params) as Task[];
+    return { data, totalCount };
   },
 };

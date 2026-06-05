@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, subDays, subMonths, startOfWeek } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { ArrowRight, Archive, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Archive, CheckCircle2, MapPin } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { SearchInput } from '@/app/components/shared/SearchInput';
 import { EmptyState } from '@/app/components/shared/EmptyState';
 import { useConveyor } from '@/app/hooks/use-conveyor';
-import type { Task } from '@/app/types';
+import type { Visit } from '@/app/types';
 
 type DateFilter = 'week' | 'month' | '3months' | 'all';
 
-export function TaskArchive() {
+export function VisitArchive() {
   const navigate = useNavigate();
-  const { getArchivedTasks } = useConveyor('db');
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { getArchivedVisits } = useConveyor('db');
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilter>('month');
   const [search, setSearch] = useState('');
@@ -39,8 +39,8 @@ export function TaskArchive() {
     const range = (dateFilter === 'all' && customFrom)
       ? { from: customFrom, to: customTo }
       : getDateRange(dateFilter);
-    const response = await getArchivedTasks({ ...range, search, page, limit: LIMIT });
-    setTasks(response?.data || (Array.isArray(response) ? response : []));
+    const response = await getArchivedVisits({ ...range, search, page, limit: LIMIT });
+    setVisits(response?.data || (Array.isArray(response) ? response : []));
     setTotal(response?.totalCount || (Array.isArray(response) ? response.length : 0));
     setLoading(false);
   };
@@ -63,16 +63,16 @@ export function TaskArchive() {
   return (
     <div className="flex flex-col h-full p-6 pr-[256px] gap-4 overflow-hidden">
       <PageHeader
-        title="أرشيف المهام"
-        description="المهام المكتملة المؤرشفة"
+        title="أرشيف الزيارات"
+        description="الزيارات المكتملة المؤرشفة"
         icon={<Archive size={20} />}
         action={
           <button
-            onClick={() => navigate('/tasks')}
+            onClick={() => navigate('/visits')}
             className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ArrowRight size={16} />
-            العودة للمهام
+            العودة للزيارات
           </button>
         }
       />
@@ -115,7 +115,7 @@ export function TaskArchive() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="بحث بعنوان المهمة..."
+          placeholder="بحث باسم العميل أو الهاتف..."
           className="flex-1 max-w-xs"
         />
       </div>
@@ -123,7 +123,7 @@ export function TaskArchive() {
       {/* العدد */}
       {!loading && (
         <p className="text-sm text-[var(--color-text-muted)]">
-          {tasks.length} مهمة مؤرشفة
+          {total} زيارة مؤرشفة
         </p>
       )}
 
@@ -132,44 +132,47 @@ export function TaskArchive() {
         {loading ? (
           <div className="flex flex-col gap-2">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-[var(--color-bg-surface)] rounded-lg animate-pulse" />
+              <div key={i} className="h-20 bg-[var(--color-bg-surface)] rounded-lg animate-pulse" />
             ))}
           </div>
-        ) : tasks.length === 0 ? (
+        ) : visits.length === 0 ? (
           <EmptyState
             icon={<Archive size={40} />}
-            title="لا توجد مهام مؤرشفة"
-            description="المهام المكتملة ستظهر هنا بعد 7 أيام من اكتمالها"
+            title="لا توجد زيارات مؤرشفة"
+            description="الزيارات المكتملة ستظهر هنا بعد 7 أيام من اكتمالها"
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {tasks.map(task => (
+            {visits.map(visit => (
               <div
-                key={task.id}
+                key={visit.id}
                 className="flex items-start gap-3 p-4 bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-lg hover:border-[var(--color-brand)]/30 transition-colors"
               >
                 <CheckCircle2 size={18} className="text-green-400 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text-primary)] line-clamp-1">
-                    {task.title}
-                  </p>
-                  {task.description && (
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5 line-clamp-1">
-                      {task.description}
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] line-clamp-1">
+                      {visit.client_name} - <span className="font-mono text-xs">{visit.client_phone}</span>
+                    </p>
+                  </div>
+                  {visit.resolution_notes && (
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1 line-clamp-1">
+                      {visit.resolution_notes}
                     </p>
                   )}
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-[var(--color-text-muted)] font-mono">
-                    <span>
-                      أُنشئت: {format(new Date(task.created_at), 'd MMM yyyy', { locale: ar })}
+                  <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-muted)] font-mono">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={11} />
+                      {visit.client_address || 'بدون عنوان'}
                     </span>
                     <span>·</span>
                     <span>
-                      أُنجزت: {format(new Date(task.updated_at), 'd MMM yyyy', { locale: ar })}
+                      تاريخ الزيارة: {format(new Date(visit.visit_date), 'd MMM yyyy', { locale: ar })}
                     </span>
                   </div>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 shrink-0">
-                  مكتمل
+                  مكتملة
                 </span>
               </div>
             ))}

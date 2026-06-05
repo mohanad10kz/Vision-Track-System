@@ -1,5 +1,5 @@
 export type VisitType = 'installation' | 'maintenance' | 'survey' | 'followup';
-export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'postponed';
+export type VisitStatus = 'scheduled' | 'completed' | 'modified';
 
 export interface Visit {
   id: number;
@@ -13,11 +13,6 @@ export interface Visit {
   technician_id: number | null;
   technician_name: string | null;
   status: VisitStatus;
-  problem_type: string | null;
-  problem_desc: string | null;
-  camera_count: number | null;
-  system_type: string | null;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
   notes: string | null;
   resolution_notes: string | null;
   created_at: string;
@@ -35,11 +30,6 @@ export interface CreateVisitInput {
   technician_id?: number | null;
   technician_name?: string | null;
   status?: VisitStatus;
-  problem_type?: string | null;
-  problem_desc?: string | null;
-  camera_count?: number | null;
-  system_type?: string | null;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
   notes?: string | null;
   resolution_notes?: string | null;
 }
@@ -54,11 +44,6 @@ export interface UpdateVisitInput {
   technician_id?: number | null;
   technician_name?: string | null;
   status?: VisitStatus;
-  problem_type?: string | null;
-  problem_desc?: string | null;
-  camera_count?: number | null;
-  system_type?: string | null;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
   notes?: string | null;
   resolution_notes?: string | null;
 }

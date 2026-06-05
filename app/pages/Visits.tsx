@@ -29,9 +29,10 @@ import { z } from 'zod';
 interface VisitFormProps {
   open: boolean;
   onClose: () => void;
-  onSave: (input: CreateVisitInput) => Promise<void>;
+  onSave: (input: CreateVisitInput | UpdateVisitInput) => Promise<void>;
   technicians: Technician[];
   clients: ReturnType<typeof useClients>['clients'];
+  initial?: Visit;
 }
 
 const visitSchema = z.object({
@@ -44,49 +45,27 @@ const visitSchema = z.object({
   visit_date: z.string().min(1, 'التاريخ مطلوب'),
   visit_time: z.string().optional(),
   notes: z.string().optional(),
-  
-  // Maintenance
-  problem_type: z.string().optional(),
-  problem_desc: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-
-  // Installation / Survey
-  camera_count: z.string().optional(),
-  system_type: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.visit_type === 'maintenance' && !data.problem_type) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'نوع المشكلة مطلوب للصيانة',
-      path: ['problem_type']
-    });
-  }
 });
 
 type VisitFormValues = z.infer<typeof visitSchema>;
 
-function VisitForm({ open, onClose, onSave, technicians, clients }: VisitFormProps) {
+function VisitForm({ open, onClose, onSave, technicians, clients, initial }: VisitFormProps) {
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<VisitFormValues>({
     resolver: zodResolver(visitSchema),
     defaultValues: {
-      visit_type: 'installation',
-      client_search: '',
-      client_name: '',
-      client_phone: '',
-      client_address: '',
-      technician_id: '',
-      visit_date: format(new Date(), 'yyyy-MM-dd'),
-      visit_time: '',
-      notes: '',
-      problem_type: '',
-      problem_desc: '',
-      priority: 'medium',
-      camera_count: '',
-      system_type: '',
+      visit_type: initial?.visit_type ?? 'installation',
+      client_search: initial?.client_name ?? '',
+      client_name: initial?.client_name ?? '',
+      client_phone: initial?.client_phone ?? '',
+      client_address: initial?.client_address ?? '',
+      technician_id: initial?.technician_id?.toString() ?? '',
+      visit_date: initial?.visit_date ?? format(new Date(), 'yyyy-MM-dd'),
+      visit_time: initial?.visit_time ?? '',
+      notes: initial?.notes ?? '',
     }
   });
 
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(initial?.client_id ?? null);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
 
   const visitType = watch('visit_type');
@@ -117,12 +96,7 @@ function VisitForm({ open, onClose, onSave, technicians, clients }: VisitFormPro
       visit_time: data.visit_time || null,
       technician_id: Number(data.technician_id),
       technician_name: tech?.name ?? null,
-      status: 'scheduled',
-      problem_type: data.visit_type === 'maintenance' ? data.problem_type || null : null,
-      problem_desc: data.visit_type === 'maintenance' ? data.problem_desc || null : null,
-      camera_count: (data.visit_type === 'installation' || data.visit_type === 'survey') && data.camera_count ? Number(data.camera_count) : null,
-      system_type: (data.visit_type === 'installation' || data.visit_type === 'survey') && data.system_type ? data.system_type || null : null,
-      priority: data.visit_type === 'maintenance' ? (data.priority || 'medium') : 'medium',
+      status: initial ? initial.status : 'scheduled',
       notes: data.notes || null,
     });
     onClose();
@@ -284,96 +258,6 @@ function VisitForm({ open, onClose, onSave, technicians, clients }: VisitFormPro
               </div>
             </div>
 
-            {/* حقول خاصة بالصيانة */}
-            <AnimatePresence>
-              {visitType === 'maintenance' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="flex flex-col gap-3 overflow-hidden"
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">نوع المشكلة *</label>
-                      <select
-                        {...register('problem_type')}
-                        className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-                      >
-                        <option value="">اختر...</option>
-                        <option value="camera">كاميرا</option>
-                        <option value="dvr">DVR/NVR</option>
-                        <option value="cables">أسلاك</option>
-                        <option value="power">طاقة</option>
-                        <option value="programming">برمجة</option>
-                        <option value="other">أخرى</option>
-                      </select>
-                      {errors.problem_type && <p className="text-red-500 text-xs mt-1">{errors.problem_type.message}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">الأولوية *</label>
-                      <select
-                        {...register('priority')}
-                        className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-                      >
-                        <option value="low">منخفضة</option>
-                        <option value="medium">متوسطة</option>
-                        <option value="high">عالية</option>
-                        <option value="urgent">عاجلة</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">وصف المشكلة</label>
-                    <textarea
-                      {...register('problem_desc')}
-                      rows={2}
-                      placeholder="وصف مختصر للمشكلة..."
-                      className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* حقول التركيب والمسح */}
-              {(visitType === 'installation' || visitType === 'survey') && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="grid grid-cols-2 gap-3 overflow-hidden"
-                >
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                      {visitType === 'survey' ? 'عدد الكاميرات المقدّر' : 'عدد الكاميرات'}
-                    </label>
-                    <input
-                      type="number"
-                      {...register('camera_count')}
-                      min="1"
-                      placeholder="0"
-                      className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                      {visitType === 'survey' ? 'نوع النظام المقترح' : 'نوع النظام'}
-                    </label>
-                    <select
-                      {...register('system_type')}
-                      className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-                    >
-                      <option value="">اختر...</option>
-                      <option value="DVR">DVR</option>
-                      <option value="NVR">NVR</option>
-                      <option value="IP">IP</option>
-                      <option value="Hybrid">Hybrid</option>
-                    </select>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* ملاحظات */}
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">ملاحظات</label>
@@ -413,65 +297,21 @@ function VisitForm({ open, onClose, onSave, technicians, clients }: VisitFormPro
 // ======================================================
 interface VisitCardProps {
   visit: Visit;
-  onChangeStatus: (id: number, status: VisitStatus, notes?: string) => Promise<void>;
+  onChangeStatus: (id: number, status: VisitStatus) => Promise<void>;
   onDelete: (id: number) => void;
+  onEdit: (visit: Visit) => void;
 }
 
-function VisitCard({ visit, onChangeStatus, onDelete }: VisitCardProps) {
+function VisitCard({ visit, onChangeStatus, onDelete, onEdit }: VisitCardProps) {
   const [showMenu, setShowMenu] = useState(false);
-  const [showResolution, setShowResolution] = useState(false);
-  const [resolutionNotes, setResolutionNotes] = useState('');
 
   const handleStatusChange = async (status: VisitStatus) => {
-    if (status === 'completed') {
-      setShowResolution(true);
-      setShowMenu(false);
-      return;
-    }
     await onChangeStatus(visit.id, status);
     setShowMenu(false);
   };
 
-  const handleCompleteWithNotes = async () => {
-    await onChangeStatus(visit.id, 'completed', resolutionNotes);
-    setShowResolution(false);
-    setResolutionNotes('');
-  };
-
-  const problemTypeLabels: Record<string, string> = {
-    camera: 'كاميرا', dvr: 'DVR/NVR', cables: 'أسلاك',
-    power: 'طاقة', programming: 'برمجة', other: 'أخرى',
-  };
-
   return (
     <div className="relative bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 hover:border-[var(--color-brand)]/40 transition-all">
-      {showResolution && (
-        <div className="absolute inset-0 z-10 bg-[var(--color-bg-surface)] rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-sm font-medium text-[var(--color-text-primary)]">ما تم تنفيذه (اختياري)</p>
-          <textarea
-            value={resolutionNotes}
-            onChange={e => setResolutionNotes(e.target.value)}
-            rows={3}
-            placeholder="وصف ما تم إنجازه في هذه الزيارة..."
-            className="flex-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)] resize-none"
-            autoFocus
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => setShowResolution(false)}
-              className="px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-            >
-              إلغاء
-            </button>
-            <button
-              onClick={handleCompleteWithNotes}
-              className="px-4 py-1.5 text-sm font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
-            >
-              تأكيد الإتمام
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="flex items-start gap-3">
         {/* الوقت */}
@@ -493,24 +333,12 @@ function VisitCard({ visit, onChangeStatus, onDelete }: VisitCardProps) {
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <VisitTypeBadge type={visit.visit_type} />
             <span className="text-sm font-medium text-[var(--color-text-primary)]">
-              {visit.client_name}
+              {visit.client_name} - <span className="text-[var(--color-text-muted)] font-mono text-xs">{visit.client_phone}</span>
             </span>
-            {visit.visit_type === 'maintenance' && visit.priority && visit.priority !== 'medium' && (
-              <StatusBadge status={visit.priority} size="sm" />
-            )}
           </div>
 
           <div className="text-xs text-[var(--color-text-muted)] mb-1.5 flex items-center gap-3 flex-wrap">
-            {/* معلومات حسب النوع */}
-            {visit.visit_type === 'installation' && visit.camera_count && (
-              <span>{visit.camera_count} كاميرا {visit.system_type ? `— ${visit.system_type}` : ''}</span>
-            )}
-            {visit.visit_type === 'maintenance' && visit.problem_type && (
-              <span className="text-amber-400">{problemTypeLabels[visit.problem_type] ?? visit.problem_type}</span>
-            )}
-            {visit.visit_type === 'survey' && visit.camera_count && (
-              <span>تقدير {visit.camera_count} كاميرا {visit.system_type ? `— ${visit.system_type}` : ''}</span>
-            )}
+            {/* ملاحظات */}
             {visit.notes && (
               <span className="line-clamp-1">{visit.notes}</span>
             )}
@@ -558,16 +386,9 @@ function VisitCard({ visit, onChangeStatus, onDelete }: VisitCardProps) {
                       <CheckCircle size={12} /> مكتملة
                     </button>
                   )}
-                  {visit.status !== 'postponed' && (
-                    <button onClick={() => handleStatusChange('postponed')} className="w-full text-right px-3 py-1.5 text-xs text-orange-400 hover:bg-[var(--color-bg-hover)] rounded flex items-center gap-2">
-                      <Pause size={12} /> مؤجلة
-                    </button>
-                  )}
-                  {visit.status !== 'cancelled' && (
-                    <button onClick={() => handleStatusChange('cancelled')} className="w-full text-right px-3 py-1.5 text-xs text-red-400 hover:bg-[var(--color-bg-hover)] rounded flex items-center gap-2">
-                      <XCircle size={12} /> ملغاة
-                    </button>
-                  )}
+                  <button onClick={() => { onEdit(visit); setShowMenu(false); }} className="w-full text-right px-3 py-1.5 text-xs text-orange-400 hover:bg-[var(--color-bg-hover)] rounded flex items-center gap-2">
+                    <Edit2 size={12} /> تعديل
+                  </button>
                   <div className="h-px bg-[var(--color-border)] my-1" />
                   <button
                     onClick={() => { onDelete(visit.id); setShowMenu(false); }}
@@ -610,9 +431,10 @@ export function Visits() {
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editVisit, setEditVisit] = useState<Visit | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { visits, loading, today, tomorrow, upcoming, past, create, remove, changeStatus } = useVisits(
+  const { visits, loading, today, tomorrow, upcoming, past, create, update, remove, changeStatus } = useVisits(
     activeTab === 'all' ? undefined : activeTab as VisitType
   );
   const { clients } = useClients();
@@ -635,10 +457,16 @@ export function Visits() {
     { key: 'followup',     label: 'متابعة',         icon: RefreshCw    },
   ];
 
-  const handleCreate = async (input: CreateVisitInput) => {
-    await create(input);
-    toast.success('تمت إضافة الزيارة بنجاح');
+  const handleSave = async (input: CreateVisitInput | UpdateVisitInput) => {
+    if (editVisit) {
+      await update(editVisit.id, input as UpdateVisitInput);
+      toast.success('تم تعديل الزيارة بنجاح');
+    } else {
+      await create(input as CreateVisitInput);
+      toast.success('تمت إضافة الزيارة بنجاح');
+    }
     setShowForm(false);
+    setEditVisit(null);
   };
 
   const handleDelete = async (id: number) => {
@@ -659,6 +487,10 @@ export function Visits() {
               visit={v}
               onChangeStatus={changeStatus}
               onDelete={(id) => setDeleteId(id)}
+              onEdit={(visit) => {
+                setEditVisit(visit);
+                setShowForm(true);
+              }}
             />
           ))}
         </div>
@@ -706,7 +538,10 @@ export function Visits() {
           icon={<CalendarDays size={20} />}
           action={
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setEditVisit(null);
+                setShowForm(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] transition-colors"
             >
               <Plus size={16} />
@@ -761,7 +596,10 @@ export function Visits() {
             title="لا توجد زيارات"
             description={activeTab === 'all' ? 'ابدأ بإضافة زيارة جديدة' : `لا توجد زيارات من نوع "${tabs.find(t => t.key === activeTab)?.label}"`}
             actionLabel="زيارة جديدة"
-            onAction={() => setShowForm(true)}
+            onAction={() => {
+              setEditVisit(null);
+              setShowForm(true);
+            }}
           />
         ) : (
           <>
@@ -775,10 +613,14 @@ export function Visits() {
         {showForm && (
           <VisitForm
             open={showForm}
-            onClose={() => setShowForm(false)}
-            onSave={handleCreate}
+            onClose={() => {
+              setShowForm(false);
+              setEditVisit(null);
+            }}
+            onSave={handleSave}
             technicians={technicians}
             clients={clients}
+            initial={editVisit || undefined}
           />
         )}
       </AnimatePresence>

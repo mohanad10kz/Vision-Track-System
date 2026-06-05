@@ -329,16 +329,24 @@ export function CallLog() {
   const [showForm, setShowForm] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { calls, loading, create, markDone, remove } = useCalls();
+  const { calls, total, loading, filter, setFilter, create, markDone, remove } = useCalls();
 
-  // فلترة محلية
-  const filteredCalls = calls.filter(c => {
-    if (search && !c.contact_name.includes(search) && !c.subject.includes(search)) return false;
-    if (contactTypeFilter && c.contact_type !== contactTypeFilter) return false;
-    if (directionFilter && c.direction !== directionFilter) return false;
-    if (followupOnly && !(c.requires_followup === 1 && c.followup_done === 0)) return false;
-    return true;
-  });
+  // لا حاجة لفلترة محلية معقدة لأن الـ backend يدعمها الآن،
+  // لكن سنمرر الفلاتر للـ hook.
+  
+  // تحديث الفلاتر عند تغيير الإدخال
+  useEffect(() => {
+    setFilter({
+      ...filter,
+      search,
+      contactType: contactTypeFilter || undefined,
+      direction: directionFilter || undefined,
+      requiresFollowup: followupOnly || undefined,
+      page: 1, // العودة للصفحة الأولى عند تغيير الفلاتر
+    });
+  }, [search, contactTypeFilter, directionFilter, followupOnly]);
+
+  const filteredCalls = calls || [];
 
   // تجميع حسب التاريخ
   const grouped = filteredCalls.reduce((acc, call) => {
@@ -474,6 +482,29 @@ export function CallLog() {
                 </div>
               </div>
             ))}
+
+            {/* Pagination Controls */}
+            {total > (filter.limit || 10) && (
+              <div className="flex items-center justify-center gap-2 py-4 mt-2 border-t border-[var(--color-border)]">
+                <button
+                  disabled={filter.page === 1}
+                  onClick={() => setFilter({ ...filter, page: (filter.page || 1) - 1 })}
+                  className="px-3 py-1.5 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                >
+                  السابق
+                </button>
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  صفحة {filter.page} من {Math.ceil(total / (filter.limit || 10))}
+                </span>
+                <button
+                  disabled={(filter.page || 1) >= Math.ceil(total / (filter.limit || 10))}
+                  onClick={() => setFilter({ ...filter, page: (filter.page || 1) + 1 })}
+                  className="px-3 py-1.5 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                >
+                  التالي
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -15,7 +15,7 @@ export const registerDbHandlers = () => {
   handle('updateTask', ({ id, input }: { id: number; input: Parameters<typeof tasksRepo.update>[1] }) => tasksRepo.update(id, input));
   handle('updateTaskStatus', ({ id, status, position }: { id: number; status: string; position: number }) => tasksRepo.updateStatus(id, status, position));
   handle('deleteTask', ({ id }: { id: number }) => tasksRepo.delete(id));
-  handle('getArchivedTasks', (filter: { from?: string; to?: string; search?: string }) => tasksRepo.findArchived(filter));
+  handle('getArchivedTasks', (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => tasksRepo.findArchived(filter));
 
   // ==================== NOTES ====================
   handle('getNotes', () => notesRepo.findAll());
@@ -24,7 +24,7 @@ export const registerDbHandlers = () => {
   handle('updateNote', ({ id, input }: { id: number; input: Parameters<typeof notesRepo.update>[1] }) => notesRepo.update(id, input));
   handle('updateNoteStatus', ({ id, status, position }: { id: number; status: string; position: number }) => notesRepo.updateStatus(id, status, position));
   handle('deleteNote', ({ id }: { id: number }) => notesRepo.delete(id));
-  handle('getArchivedNotes', (filter: { from?: string; to?: string; search?: string }) => notesRepo.findArchived(filter));
+  handle('getArchivedNotes', (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => notesRepo.findArchived(filter));
 
   // ==================== VISITS ====================
   handle('getVisits', (filter?: { type?: string; status?: string; technicianId?: number; from?: string; to?: string; search?: string }) => visitsRepo.findAll(filter ?? undefined));
@@ -33,6 +33,7 @@ export const registerDbHandlers = () => {
   handle('updateVisit', ({ id, input }: { id: number; input: Parameters<typeof visitsRepo.update>[1] }) => visitsRepo.update(id, input));
   handle('updateVisitStatus', ({ id, status, resolutionNotes }: { id: number; status: string; resolutionNotes?: string }) => visitsRepo.updateStatus(id, status, resolutionNotes));
   handle('deleteVisit', ({ id }: { id: number }) => visitsRepo.delete(id));
+  handle('getArchivedVisits', (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => visitsRepo.findArchived(filter));
 
   // ==================== CLIENTS ====================
   handle('getClients', (filter?: { search?: string }) => clientsRepo.findAll(filter?.search));
@@ -51,7 +52,7 @@ export const registerDbHandlers = () => {
   handle('getTechnicianTodayVisits', ({ id, today }: { id: number; today: string }) => techniciansRepo.countTodayVisits(id, today));
 
   // ==================== CALLS ====================
-  handle('getCalls', (filter?: { search?: string; contactType?: string; direction?: string; requiresFollowup?: boolean }) => callsRepo.findAll(filter ?? undefined));
+  handle('getCalls', (filter?: { search?: string; contactType?: string; direction?: string; requiresFollowup?: boolean, page?: number, limit?: number }) => callsRepo.findAll(filter ?? undefined));
   handle('getCallById', ({ id }: { id: number }) => callsRepo.findById(id));
   handle('createCall', (input: Parameters<typeof callsRepo.create>[0]) => callsRepo.create(input));
   handle('updateCall', ({ id, input }: { id: number; input: Parameters<typeof callsRepo.update>[1] }) => callsRepo.update(id, input));

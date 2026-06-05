@@ -17,8 +17,8 @@ export const dashboardRepo = {
     // 4. Total Clients Count
     const totalClients = db.prepare('SELECT count(*) as count FROM clients').get() as { count: number };
 
-    // 5. Today Notes
-    const todayNotes = db.prepare('SELECT * FROM notes WHERE date(created_at) = ? OR date(updated_at) = ? ORDER BY updated_at DESC LIMIT 10').all(today, today);
+    // 5. Today Notes (Active Only)
+    const todayNotes = db.prepare('SELECT * FROM notes WHERE (date(created_at) = ? OR date(updated_at) = ?) AND archived_at IS NULL ORDER BY updated_at DESC LIMIT 10').all(today, today);
 
     // 6. Today Visits
     const todayVisitsList = db.prepare('SELECT * FROM visits WHERE date(visit_date) = ? ORDER BY visit_time ASC').all(today);

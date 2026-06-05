@@ -81,6 +81,7 @@ export const createTables = (db: Database) => {
       priority         TEXT DEFAULT 'medium',
       notes            TEXT,
       resolution_notes TEXT,
+      archived_at      TEXT DEFAULT NULL,
       created_at       TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
       updated_at       TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
@@ -153,5 +154,9 @@ export const runMigrations = (db: Database) => {
   }
   if (!visitColNames.includes('technician_name')) {
     db.exec(`ALTER TABLE visits ADD COLUMN technician_name TEXT;`);
+  }
+  if (!visitColNames.includes('archived_at')) {
+    db.exec(`ALTER TABLE visits ADD COLUMN archived_at TEXT DEFAULT NULL;`);
+    console.log('[Migration] visits: archived_at column added');
   }
 };

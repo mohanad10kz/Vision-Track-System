@@ -20,6 +20,9 @@ export function NoteArchive() {
   const [search, setSearch] = useState('');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 10;
 
   const getDateRange = (filter: DateFilter) => {
     const now = new Date();
@@ -36,14 +39,19 @@ export function NoteArchive() {
     const range = (dateFilter === 'all' && customFrom)
       ? { from: customFrom, to: customTo }
       : getDateRange(dateFilter);
-    const data = await getArchivedNotes({ ...range, search });
-    setNotes(data);
+    const response = await getArchivedNotes({ ...range, search, page, limit: LIMIT });
+    setNotes(response?.data || (Array.isArray(response) ? response : []));
+    setTotal(response?.totalCount || (Array.isArray(response) ? response.length : 0));
     setLoading(false);
   };
 
   useEffect(() => {
-    load();
+    setPage(1);
   }, [dateFilter, search, customFrom, customTo]);
+
+  useEffect(() => {
+    load();
+  }, [dateFilter, search, customFrom, customTo, page]);
 
   const filterButtons: { key: DateFilter; label: string }[] = [
     { key: 'week',    label: 'هذا الأسبوع' },
@@ -170,6 +178,29 @@ export function NoteArchive() {
                 </span>
               </div>
             ))}
+
+            {/* Pagination Controls */}
+            {total > LIMIT && (
+              <div className="flex items-center justify-center gap-2 py-4 mt-2 border-t border-[var(--color-border)]">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                  className="px-3 py-1.5 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                >
+                  السابق
+                </button>
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  صفحة {page} من {Math.ceil(total / LIMIT)}
+                </span>
+                <button
+                  disabled={page >= Math.ceil(total / LIMIT)}
+                  onClick={() => setPage(p => p + 1)}
+                  className="px-3 py-1.5 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                >
+                  التالي
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

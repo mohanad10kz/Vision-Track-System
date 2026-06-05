@@ -7,19 +7,23 @@ interface CallFilter {
   contactType?: string;
   direction?: string;
   requiresFollowup?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 export function useCalls(initialFilter?: CallFilter) {
   const { getCalls, createCall, updateCall, markCallFollowupDone, deleteCall } = useConveyor('db');
   const [calls, setCalls] = useState<CallLog[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<CallFilter>(initialFilter ?? {});
+  const [filter, setFilter] = useState<CallFilter>({ page: 1, limit: 10, ...initialFilter });
 
   const load = useCallback(async (f?: CallFilter) => {
     setLoading(true);
     try {
-      const data = await getCalls(f ?? filter);
-      setCalls(data);
+      const response = await getCalls(f ?? filter);
+      setCalls(response?.data || (Array.isArray(response) ? response : []));
+      setTotal(response?.totalCount || (Array.isArray(response) ? response.length : 0));
     } catch (error) {
       console.error('Failed to load calls:', error);
     } finally {
@@ -33,6 +37,7 @@ export function useCalls(initialFilter?: CallFilter) {
 
   return {
     calls,
+    total,
     loading,
     filter,
     setFilter: (f: CallFilter) => {

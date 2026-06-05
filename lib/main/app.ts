@@ -6,6 +6,7 @@ import { registerDbHandlers } from '../conveyor/handlers/db-handler';
 import { getDb } from '../database/db';
 import { tasksRepo } from '../database/repositories/tasks.repo';
 import { notesRepo } from '../database/repositories/notes.repo';
+import { visitsRepo } from '../database/repositories/visits.repo';
 
 export function createAppWindow(): void {
   // Initialize Database
@@ -15,8 +16,9 @@ export function createAppWindow(): void {
   try {
     const archivedTasks = tasksRepo.archiveOldDone();
     const archivedNotes = notesRepo.archiveOldDone();
-    if (archivedTasks > 0 || archivedNotes > 0) {
-      console.log(`[Startup] Archived ${archivedTasks} tasks, ${archivedNotes} notes`);
+    const archivedVisits = visitsRepo.archiveOldDone();
+    if (archivedTasks > 0 || archivedNotes > 0 || archivedVisits > 0) {
+      console.log(`[Startup] Archived ${archivedTasks} tasks, ${archivedNotes} notes, ${archivedVisits} visits`);
     }
   } catch (err) {
     console.error('[Startup] Auto-archive failed:', err);

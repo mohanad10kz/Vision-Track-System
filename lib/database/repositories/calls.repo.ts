@@ -7,7 +7,9 @@ export const callsRepo = {
     contactType?: string;
     direction?: string;
     requiresFollowup?: boolean;
-  }): CallLog[] => {
+    page?: number;
+    limit?: number;
+  }) => {
     let query = `SELECT * FROM call_logs WHERE 1=1`;
     const params: (string | number)[] = [];
 
@@ -28,8 +30,23 @@ export const callsRepo = {
       params.push(s, s);
     }
 
+    // Count Total
+    const countQuery = query.replace('SELECT *', 'SELECT count(*) as count');
+    const totalCount = (getDb().prepare(countQuery).get(...params) as { count: number }).count;
+
+    // Pagination
     query += ` ORDER BY created_at DESC`;
-    return getDb().prepare(query).all(...params) as CallLog[];
+    if (filter?.limit) {
+      query += ` LIMIT ?`;
+      params.push(filter.limit);
+      if (filter.page) {
+        query += ` OFFSET ?`;
+        params.push((filter.page - 1) * filter.limit);
+      }
+    }
+
+    const data = getDb().prepare(query).all(...params) as CallLog[];
+    return { data, totalCount };
   },
 
   findById: (id: number): CallLog | undefined => {

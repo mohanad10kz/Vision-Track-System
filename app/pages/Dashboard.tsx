@@ -10,7 +10,6 @@ import { PageHeader } from '@/app/components/shared/PageHeader';
 import { useDashboard } from '@/app/hooks/use-dashboard';
 import { VisitTypeBadge } from '@/app/components/shared/VisitTypeBadge';
 import { StatusBadge } from '@/app/components/shared/StatusBadge';
-import { PriorityBadge } from '@/app/components/shared/PriorityBadge';
 
 export function Dashboard() {
   const { data, loading } = useDashboard();
@@ -99,7 +98,10 @@ export function Dashboard() {
               ) : (
                 data.todayNotes.map(note => (
                   <div key={note.id} className="p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border)] border-l-4" style={{ borderLeftColor: note.color || 'var(--color-brand)' }}>
-                    <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">{note.title}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{note.title}</p>
+                      <StatusBadge status={note.status} size="sm" />
+                    </div>
                     <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">{note.content}</p>
                   </div>
                 ))
@@ -153,13 +155,10 @@ export function Dashboard() {
               ) : (
                 data.todayTasks.map(task => (
                   <div key={task.id} className="p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border)]">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{task.title}</p>
-                      <PriorityBadge priority={task.priority} />
-                    </div>
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{task.title}</p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1">{task.description}</p>
-                      <StatusBadge status={task.status} />
+                      <StatusBadge status={task.status} size="sm" />
                     </div>
                   </div>
                 ))

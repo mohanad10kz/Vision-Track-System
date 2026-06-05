@@ -77,9 +77,9 @@ export const notesRepo = {
   },
 
   // جلب الملاحظات المؤرشفة مع فلترة بالتاريخ والبحث
-  findArchived: (filter: { from?: string; to?: string; search?: string }): Note[] => {
+  findArchived: (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => {
     let query = `SELECT * FROM notes WHERE archived_at IS NOT NULL`;
-    const params: string[] = [];
+    const params: (string | number)[] = [];
 
     if (filter.from) {
       query += ` AND created_at >= ?`;
@@ -94,7 +94,22 @@ export const notesRepo = {
       params.push(`%${filter.search}%`);
     }
 
+    // Count Total
+    const countQuery = query.replace('SELECT *', 'SELECT count(*) as count');
+    const totalCount = (getDb().prepare(countQuery).get(...params) as { count: number }).count;
+
+    // Pagination
     query += ` ORDER BY archived_at DESC`;
-    return getDb().prepare(query).all(...params) as Note[];
+    if (filter.limit) {
+      query += ` LIMIT ?`;
+      params.push(filter.limit);
+      if (filter.page) {
+        query += ` OFFSET ?`;
+        params.push((filter.page - 1) * filter.limit);
+      }
+    }
+
+    const data = getDb().prepare(query).all(...params) as Note[];
+    return { data, totalCount };
   },
 };

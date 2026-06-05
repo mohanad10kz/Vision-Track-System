@@ -7,6 +7,7 @@ import { Notes } from './pages/Notes';
 import { TaskArchive } from './pages/TaskArchive';
 import { NoteArchive } from './pages/NoteArchive';
 import { Visits } from './pages/Visits';
+import { VisitArchive } from './pages/VisitArchive';
 import { Clients } from './pages/Clients';
 import { Technicians } from './pages/Technicians';
 import { CallLog } from './pages/CallLog';
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/notes" element={<Notes />} />
             <Route path="/notes/archive" element={<NoteArchive />} />
             <Route path="/visits" element={<Visits />} />
+            <Route path="/visits/archive" element={<VisitArchive />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/technicians" element={<Technicians />} />
             <Route path="/calls" element={<CallLog />} />

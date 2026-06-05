@@ -24,6 +24,8 @@ export const visitsRepo = {
       params.push(s, s, s);
     }
 
+    query += ` AND archived_at IS NULL`;
+
     query += ` ORDER BY visit_date ASC, visit_time ASC`;
     return getDb().prepare(query).all(...params) as Visit[];
   },
@@ -46,16 +48,12 @@ export const visitsRepo = {
         client_id, client_name, client_phone, client_address,
         visit_type, visit_date, visit_time,
         technician_id, technician_name,
-        status, problem_type, problem_desc,
-        camera_count, system_type, priority,
-        notes, resolution_notes
+        status, notes, resolution_notes
       ) VALUES (
         @client_id, @client_name, @client_phone, @client_address,
         @visit_type, @visit_date, @visit_time,
         @technician_id, @technician_name,
-        @status, @problem_type, @problem_desc,
-        @camera_count, @system_type, @priority,
-        @notes, @resolution_notes
+        @status, @notes, @resolution_notes
       )
     `);
 
@@ -70,11 +68,6 @@ export const visitsRepo = {
       technician_id: input.technician_id ?? null,
       technician_name: input.technician_name ?? null,
       status: input.status ?? 'scheduled',
-      problem_type: input.problem_type ?? null,
-      problem_desc: input.problem_desc ?? null,
-      camera_count: input.camera_count ?? null,
-      system_type: input.system_type ?? null,
-      priority: input.priority ?? 'medium',
       notes: input.notes ?? null,
       resolution_notes: input.resolution_notes ?? null,
     });
@@ -112,5 +105,52 @@ export const visitsRepo = {
   delete: (id: number): boolean => {
     const info = getDb().prepare('DELETE FROM visits WHERE id = ?').run(id);
     return info.changes > 0;
+  },
+
+  archiveOldDone: (): number => {
+    const result = getDb().prepare(`
+      UPDATE visits
+      SET archived_at = datetime('now', 'localtime')
+      WHERE status = 'completed'
+        AND archived_at IS NULL
+        AND updated_at < datetime('now', 'localtime', '-7 days')
+    `).run();
+    return result.changes;
+  },
+
+  findArchived: (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => {
+    let query = `SELECT * FROM visits WHERE archived_at IS NOT NULL`;
+    const params: (string | number)[] = [];
+
+    if (filter.from) {
+      query += ` AND visit_date >= ?`;
+      params.push(filter.from);
+    }
+    if (filter.to) {
+      query += ` AND visit_date <= ?`;
+      params.push(filter.to);
+    }
+    if (filter.search) {
+      query += ` AND (client_name LIKE ? OR client_phone LIKE ?)`;
+      params.push(`%${filter.search}%`, `%${filter.search}%`);
+    }
+
+    // Count Total
+    const countQuery = query.replace('SELECT *', 'SELECT count(*) as count');
+    const totalCount = (getDb().prepare(countQuery).get(...params) as { count: number }).count;
+
+    // Pagination
+    query += ` ORDER BY archived_at DESC`;
+    if (filter.limit) {
+      query += ` LIMIT ?`;
+      params.push(filter.limit);
+      if (filter.page) {
+        query += ` OFFSET ?`;
+        params.push((filter.page - 1) * filter.limit);
+      }
+    }
+
+    const data = getDb().prepare(query).all(...params) as Visit[];
+    return { data, totalCount };
   },
 };
