@@ -193,11 +193,11 @@ export const dbIpcSchema = {
     return: z.any(),
   },
   getTechQueueByGroup: {
-    args: z.tuple([z.object({ groupId: z.number(), queueType: z.enum(['installation', 'maintenance']) })]),
+    args: z.tuple([z.object({ groupId: z.number(), queueType: z.enum(['installation', 'maintenance', 'followup']) })]),
     return: z.any(),
   },
   skipTechnician: {
-    args: z.tuple([z.object({ id: z.number(), queueType: z.enum(['installation', 'maintenance']) })]),
+    args: z.tuple([z.object({ id: z.number(), queueType: z.enum(['installation', 'maintenance', 'followup']) })]),
     return: z.any(),
   },
   getTechGroups: {

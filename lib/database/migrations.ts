@@ -66,6 +66,7 @@ export const createTables = (db: Database) => {
       group_id   INTEGER REFERENCES tech_groups(id) ON DELETE SET NULL,
       last_install_assigned_at TEXT DEFAULT NULL,
       last_maint_assigned_at   TEXT DEFAULT NULL,
+      last_followup_assigned_at TEXT DEFAULT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
@@ -187,5 +188,9 @@ export const runMigrations = (db: Database) => {
   if (!techColNames.includes('last_maint_assigned_at')) {
     db.exec(`ALTER TABLE technicians ADD COLUMN last_maint_assigned_at TEXT DEFAULT NULL;`);
     console.log('[Migration] technicians: last_maint_assigned_at column added');
+  }
+  if (!techColNames.includes('last_followup_assigned_at')) {
+    db.exec(`ALTER TABLE technicians ADD COLUMN last_followup_assigned_at TEXT DEFAULT NULL;`);
+    console.log('[Migration] technicians: last_followup_assigned_at column added');
   }
 };

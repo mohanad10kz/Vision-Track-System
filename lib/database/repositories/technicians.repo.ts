@@ -12,8 +12,11 @@ export const techniciansRepo = {
     return getDb().prepare('SELECT * FROM technicians WHERE id = ?').get(id) as Technician | undefined;
   },
 
-  findQueueByGroup: (groupId: number, queueType: 'installation' | 'maintenance'): Technician[] => {
-    const sortColumn = queueType === 'installation' ? 'last_install_assigned_at' : 'last_maint_assigned_at';
+  findQueueByGroup: (groupId: number, queueType: 'installation' | 'maintenance' | 'followup'): Technician[] => {
+    const sortColumn = 
+      queueType === 'installation' ? 'last_install_assigned_at' : 
+      queueType === 'maintenance' ? 'last_maint_assigned_at' : 
+      'last_followup_assigned_at';
     return getDb().prepare(`
       SELECT * FROM technicians 
       WHERE group_id = ? 
@@ -72,8 +75,11 @@ export const techniciansRepo = {
     return info.changes > 0;
   },
 
-  updateQueueDate: (id: number, queueType: 'installation' | 'maintenance'): boolean => {
-    const colName = queueType === 'installation' ? 'last_install_assigned_at' : 'last_maint_assigned_at';
+  updateQueueDate: (id: number, queueType: 'installation' | 'maintenance' | 'followup'): boolean => {
+    const colName = 
+      queueType === 'installation' ? 'last_install_assigned_at' : 
+      queueType === 'maintenance' ? 'last_maint_assigned_at' : 
+      'last_followup_assigned_at';
     const info = getDb().prepare(`
       UPDATE technicians SET ${colName} = datetime('now', 'localtime') WHERE id = ?
     `).run(id);

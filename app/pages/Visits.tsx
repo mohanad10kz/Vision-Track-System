@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { format, addDays, subDays } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { format, addDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
   Plus, MapPin, Clock, User, MoreVertical,
-  Hammer, Wrench, RefreshCw, CalendarDays, CheckCircle,
-  XCircle, Trash2, Edit2, Archive
+  Hammer, Wrench, RefreshCw, CalendarDays, CheckCircle, Trash2, Edit2
 } from 'lucide-react';
 import {
   Pagination, PaginationContent, PaginationItem,
@@ -22,11 +20,7 @@ import { useVisits } from '@/app/hooks/use-visits';
 import { useClients } from '@/app/hooks/use-clients';
 import { useTechnicians } from '@/app/hooks/use-technicians';
 import type { Visit, VisitType, VisitStatus, CreateVisitInput, UpdateVisitInput } from '@/app/types/visit.types';
-import type { Technician } from '@/app/types/technician.types';
 import { toast } from 'sonner';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { VisitForm } from '@/app/components/shared/VisitForm';
 
 // VisitForm is now imported from shared components
@@ -167,7 +161,6 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
 type TabFilter = 'all' | VisitType;
 
 export function Visits() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -184,7 +177,7 @@ export function Visits() {
   const { visits, loading, create, update, remove, changeStatus } = useVisits(
     activeTab === 'all' ? undefined : activeTab as VisitType
   );
-  const { clients } = useClients();
+  const { clients, reload: reloadClients } = useClients();
   const { technicians } = useTechnicians();
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -214,6 +207,7 @@ export function Visits() {
       await create(input as CreateVisitInput);
       toast.success('تمت إضافة الزيارة بنجاح');
     }
+    await reloadClients();
     setShowForm(false);
     setEditVisit(null);
   };
@@ -292,13 +286,6 @@ export function Visits() {
           action={
             <div className="flex items-center gap-2">
               <button
-                onClick={() => navigate('/visits/archive')}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg hover:border-[var(--color-brand)]/50 transition-colors"
-              >
-                <Archive size={15} />
-                الأرشيف
-              </button>
-              <button
                 onClick={() => {
                   setEditVisit(null);
                   setShowForm(true);
@@ -366,10 +353,8 @@ export function Visits() {
         ) : allFiltered.length === 0 ? (
           <EmptyState
             icon={<CalendarDays size={48} />}
-            title="لا توجد زيارات في الأيام السبعة الأخيرة"
-            description="يمكنك عرض الزيارات القديمة والمكتملة في الأرشيف"
-            actionLabel="عرض الأرشيف"
-            onAction={() => navigate('/visits/archive')}
+            title="لا توجد زيارات مطابقة للبحث"
+            description="جرب البحث بكلمات أخرى"
           />
         ) : (
           renderAllGroups()

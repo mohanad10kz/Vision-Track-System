@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, subDays, subMonths, startOfWeek } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { ArrowRight, Archive, CheckCircle2, MapPin } from 'lucide-react';
+import { ArrowRight, Archive, CheckCircle2, MapPin, User } from 'lucide-react';
 import {
   Pagination, PaginationContent, PaginationItem,
   PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis,
@@ -165,6 +165,15 @@ export function VisitArchive() {
                     </p>
                   )}
                   <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-muted)] font-mono">
+                    {visit.technician_name && (
+                      <>
+                        <span className="flex items-center gap-1 font-sans">
+                          <User size={11} />
+                          {visit.technician_name}
+                        </span>
+                        <span>·</span>
+                      </>
+                    )}
                     <span className="flex items-center gap-1">
                       <MapPin size={11} />
                       {visit.client_address || 'بدون عنوان'}

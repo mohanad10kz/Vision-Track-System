@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Phone, XCircle, Edit2, Trash2, HardHat, Users } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { EmptyState } from '@/app/components/shared/EmptyState';
 import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useTechnicians } from '@/app/hooks/use-technicians';
-import type { Technician, CreateTechnicianInput, UpdateTechnicianInput, TechnicianSpecialty, TechnicianStatus } from '@/app/types/technician.types';
+import type { Technician, CreateTechnicianInput, UpdateTechnicianInput, TechnicianStatus } from '@/app/types/technician.types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,12 +23,7 @@ function getAvatarColor(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
 }
 
-const specialtyLabels: Record<string, string> = {
-  installation: 'تركيب',
-  maintenance:  'صيانة',
-  programming:  'برمجة',
-  all:          'الكل',
-};
+
 
 // ======================================================
 // Technician Form
@@ -43,31 +38,40 @@ interface TechFormProps {
 const technicianSchema = z.object({
   name: z.string().min(2, 'الاسم يجب أن يكون حرفين على الأقل'),
   phone: z.string().min(5, 'رقم الهاتف قصير جداً'),
-  specialty: z.enum(['installation', 'maintenance', 'programming', 'all', '']).optional(),
   notes: z.string().optional(),
   group_id: z.number().optional().nullable(),
 });
 type TechFormValues = z.infer<typeof technicianSchema>;
 
 function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<TechFormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<TechFormValues>({
     resolver: zodResolver(technicianSchema),
     defaultValues: {
       name: initial?.name ?? '',
       phone: initial?.phone ?? '',
-      specialty: initial?.specialty ?? '',
       notes: initial?.notes ?? '',
       group_id: initial?.group_id ?? null,
     }
   });
 
-  const { groups } = useTechGroups();
+  const { groups, isLoading } = useTechGroups();
+
+  useEffect(() => {
+    if (!isLoading && initial) {
+      reset({
+        name: initial.name ?? '',
+        phone: initial.phone ?? '',
+        notes: initial.notes ?? '',
+        group_id: initial.group_id ?? null,
+      });
+    }
+  }, [isLoading, initial, reset]);
 
   const onSubmit = async (data: TechFormValues) => {
     await onSave({
       name: data.name,
       phone: data.phone,
-      specialty: (data.specialty || null) as TechnicianSpecialty | null,
+      specialty: 'all',
       notes: data.notes || null,
       group_id: data.group_id || null,
     });
@@ -120,19 +124,7 @@ function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">التخصص</label>
-              <select
-                {...register('specialty')}
-                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
-              >
-                <option value="">غير محدد</option>
-                <option value="installation">تركيب</option>
-                <option value="maintenance">صيانة</option>
-                <option value="programming">برمجة</option>
-                <option value="all">الكل</option>
-              </select>
-            </div>
+
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">المجموعة (اختياري)</label>
               <select
@@ -206,11 +198,6 @@ function TechnicianCard({
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">{tech.name}</p>
-          {tech.specialty && (
-            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              {specialtyLabels[tech.specialty] ?? tech.specialty}
-            </p>
-          )}
         </div>
       </div>
 
@@ -271,6 +258,7 @@ function TechnicianCard({
 // ======================================================
 export function Technicians() {
   const { technicians, loading, create, update, changeStatus, remove } = useTechnicians();
+  const { groups, fetchGroups } = useTechGroups();
   const [showForm, setShowForm] = useState(false);
   const [showGroupsManager, setShowGroupsManager] = useState(false);
   const [editTech, setEditTech] = useState<Technician | null>(null);
@@ -340,16 +328,57 @@ export function Technicians() {
             onAction={() => setShowForm(true)}
           />
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {technicians.map(tech => (
-              <TechnicianCard
-                key={tech.id}
-                tech={tech}
-                onStatusChange={changeStatus}
-                onEdit={() => setEditTech(tech)}
-                onDelete={() => setDeleteId(tech.id)}
-              />
-            ))}
+          <div className="flex flex-col gap-8">
+            {groups.map(group => {
+              const groupTechs = technicians.filter(t => t.group_id === group.id);
+              return (
+                <div key={group.id} className="border-b border-[var(--color-border)]/50 pb-6 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-brand)]" />
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      {group.name} ({groupTechs.length})
+                    </h3>
+                  </div>
+                  {groupTechs.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)] italic pr-4">لا يوجد فنيين في هذه المجموعة</p>
+                  ) : (
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {groupTechs.map(tech => (
+                        <TechnicianCard
+                          key={tech.id}
+                          tech={tech}
+                          onStatusChange={changeStatus}
+                          onEdit={() => setEditTech(tech)}
+                          onDelete={() => setDeleteId(tech.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {technicians.filter(t => !t.group_id).length > 0 && (
+              <div className="pb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    بدون مجموعة ({technicians.filter(t => !t.group_id).length})
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {technicians.filter(t => !t.group_id).map(tech => (
+                    <TechnicianCard
+                      key={tech.id}
+                      tech={tech}
+                      onStatusChange={changeStatus}
+                      onEdit={() => setEditTech(tech)}
+                      onDelete={() => setDeleteId(tech.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -375,6 +404,7 @@ export function Technicians() {
       <TechGroupManager
         open={showGroupsManager}
         onClose={() => setShowGroupsManager(false)}
+        onGroupsChange={fetchGroups}
       />
 
       <ConfirmDialog

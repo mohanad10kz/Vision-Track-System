@@ -120,7 +120,7 @@ export const Tasks = () => {
         }
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden mt-6">
         <KanbanBoard 
           tasks={tasks}
           onTasksReorder={(updates) => reorder(updates)}

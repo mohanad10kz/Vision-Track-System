@@ -127,7 +127,7 @@ export const Notes = () => {
         }
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden mt-6">
         <NotesBoard 
           notes={notes}
           onNotesReorder={(updates) => reorder(updates)}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Plus, XCircle, Trash2, Edit2, Users } from 'lucide-react';
 import { useTechGroups } from '@/app/hooks/use-tech-groups';
 import type { TechGroup } from '@/app/types/tech-group.types';
@@ -8,9 +8,10 @@ import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 interface Props {
   open: boolean;
   onClose: () => void;
+  onGroupsChange?: () => void;
 }
 
-export function TechGroupManager({ open, onClose }: Props) {
+export function TechGroupManager({ open, onClose, onGroupsChange }: Props) {
   const { groups, createGroup, updateGroup, deleteGroup } = useTechGroups();
   const [isAdding, setIsAdding] = useState(false);
   const [editGroup, setEditGroup] = useState<TechGroup | null>(null);
@@ -27,6 +28,7 @@ export function TechGroupManager({ open, onClose }: Props) {
     setName('');
     setEditGroup(null);
     setIsAdding(false);
+    onGroupsChange?.();
   };
 
   if (!open) return null;
@@ -123,7 +125,10 @@ export function TechGroupManager({ open, onClose }: Props) {
         description="هل أنت متأكد من حذف هذه المجموعة؟ لن يتم حذف الفنيين بل سيصبحون بلا مجموعة."
         confirmLabel="حذف"
         onConfirm={async () => {
-          if (deleteId) await deleteGroup(deleteId);
+          if (deleteId) {
+            await deleteGroup(deleteId);
+            onGroupsChange?.();
+          }
           setDeleteId(null);
         }}
       />

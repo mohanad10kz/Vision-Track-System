@@ -4,15 +4,15 @@ import { ar } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Phone, PhoneIncoming, PhoneOutgoing,
-  Bell, BellOff, CheckCircle, Edit2, Trash2,
-  XCircle, MessageSquare, Filter
+  Bell, CheckCircle,Trash2,
+  XCircle
 } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { SearchInput } from '@/app/components/shared/SearchInput';
 import { EmptyState } from '@/app/components/shared/EmptyState';
 import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useCalls } from '@/app/hooks/use-calls';
-import type { CallLog, CreateCallLogInput, UpdateCallLogInput, CallContactType, CallDirection } from '@/app/types/call.types';
+import type { CallLog, CreateCallLogInput } from '@/app/types/call.types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -260,13 +260,12 @@ function CallCard({ call, onMarkDone, onDelete }: {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <div>
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">{call.contact_name}</span>
-            <span className="mr-2 text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-elevated)] px-1.5 py-0.5 rounded">
-              {contactTypeLabels[call.contact_type] ?? call.contact_type}
-            </span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">{call.contact_name}</span>
+          <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-elevated)] px-1.5 py-0.5 rounded shrink-0">
+            {contactTypeLabels[call.contact_type] ?? call.contact_type}
+          </span>
+          <span className="text-[10px] text-[var(--color-text-muted)] select-none shrink-0">•</span>
           <span className="text-xs text-[var(--color-text-muted)] font-mono shrink-0">
             {format(new Date(call.created_at), 'h:mm a', { locale: ar })}
           </span>

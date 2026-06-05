@@ -57,8 +57,8 @@ export class DbApi extends ConveyorApi {
 
   // ==================== TECH GROUPS & QUEUES ====================
   getSurveysByClientPhone = (filter: { phone: string }) => this.invoke('getSurveysByClientPhone', filter);
-  getTechQueueByGroup = (filter: { groupId: number; queueType: 'installation' | 'maintenance' }) => this.invoke('getTechQueueByGroup', filter);
-  skipTechnician = (filter: { id: number; queueType: 'installation' | 'maintenance' }) => this.invoke('skipTechnician', filter);
+  getTechQueueByGroup = (filter: { groupId: number; queueType: 'installation' | 'maintenance' | 'followup' }) => this.invoke('getTechQueueByGroup', filter);
+  skipTechnician = (filter: { id: number; queueType: 'installation' | 'maintenance' | 'followup' }) => this.invoke('skipTechnician', filter);
   getTechGroups = () => this.invoke('getTechGroups');
   createTechGroup = (input: unknown) => this.invoke('createTechGroup', input);
   updateTechGroup = (id: number, input: unknown) => this.invoke('updateTechGroup', { id, input });

@@ -35,13 +35,15 @@ export const visitsRepo = {
   },
 
   findSurveysByClientPhone: (phone: string): Visit[] => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const searchSuffix = cleanPhone.length >= 8 ? `%${cleanPhone.slice(-8)}` : `%${cleanPhone}`;
     return getDb().prepare(`
       SELECT * FROM visits 
-      WHERE client_phone = ? 
+      WHERE replace(replace(client_phone, '-', ''), ' ', '') LIKE ? 
         AND visit_type = 'survey' 
         AND status = 'completed'
       ORDER BY visit_date DESC, visit_time DESC
-    `).all(phone) as Visit[];
+    `).all(searchSuffix) as Visit[];
   },
 
   countTodayForTechnician: (technicianId: number, today: string): number => {

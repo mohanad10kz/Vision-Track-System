@@ -52,8 +52,8 @@ export const registerDbHandlers = () => {
   handle('updateTechnicianStatus', ({ id, status }: { id: number; status: string }) => techniciansRepo.updateStatus(id, status));
   handle('deleteTechnician', ({ id }: { id: number }) => techniciansRepo.delete(id));
   handle('getTechnicianTodayVisits', ({ id, today }: { id: number; today: string }) => techniciansRepo.countTodayVisits(id, today));
-  handle('getTechQueueByGroup', ({ groupId, queueType }: { groupId: number; queueType: 'installation' | 'maintenance' }) => techniciansRepo.findQueueByGroup(groupId, queueType));
-  handle('skipTechnician', ({ id, queueType }: { id: number; queueType: 'installation' | 'maintenance' }) => techniciansRepo.updateQueueDate(id, queueType));
+  handle('getTechQueueByGroup', ({ groupId, queueType }: { groupId: number; queueType: 'installation' | 'maintenance' | 'followup' }) => techniciansRepo.findQueueByGroup(groupId, queueType));
+  handle('skipTechnician', ({ id, queueType }: { id: number; queueType: 'installation' | 'maintenance' | 'followup' }) => techniciansRepo.updateQueueDate(id, queueType));
 
   // ==================== TECH GROUPS ====================
   handle('getTechGroups', () => techGroupsRepo.findAll());

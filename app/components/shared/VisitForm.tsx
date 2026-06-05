@@ -51,7 +51,7 @@ export function VisitForm({ open, onClose, onSave, technicians, clients, initial
   });
 
   const { groups } = useTechGroups();
-  const { getTechQueueByGroup, getSurveysByClientPhone, skipTechnician } = useConveyor('db');
+  const { getTechQueueByGroup, getSurveysByClientPhone, skipTechnician, createClient } = useConveyor('db');
   const [selectedClientId, setSelectedClientId] = useState<number | null>(initial?.client_id ?? null);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
@@ -80,7 +80,7 @@ export function VisitForm({ open, onClose, onSave, technicians, clients, initial
   // جلب الفنيين للمجموعة المحددة مع الترتيب (Round Robin)
   const fetchQueue = async (groupId: number, type: VisitType) => {
     try {
-      const queueType = type === 'maintenance' ? 'maintenance' : 'installation';
+      const queueType = type === 'maintenance' ? 'maintenance' : type === 'followup' ? 'followup' : 'installation';
       const queue = await getTechQueueByGroup({ groupId, queueType }) as Technician[];
       setQueueTechs(queue);
     } catch (err) {
@@ -109,7 +109,7 @@ export function VisitForm({ open, onClose, onSave, technicians, clients, initial
   }, [visitType, isBasedOnSurvey, clientPhone]);
 
   const handleSkipTech = async (techId: number) => {
-    const queueType = visitType === 'maintenance' ? 'maintenance' : 'installation';
+    const queueType = visitType === 'maintenance' ? 'maintenance' : visitType === 'followup' ? 'followup' : 'installation';
     try {
       await skipTechnician({ id: techId, queueType });
       toast.success('تم ترحيل دور الفني لآخر القائمة');
@@ -125,8 +125,22 @@ export function VisitForm({ open, onClose, onSave, technicians, clients, initial
   const onSubmit = async (data: VisitFormValues) => {
     const tech = technicians.find(t => t.id === Number(data.technician_id));
     
+    let clientId = selectedClientId;
+    if (!clientId) {
+      try {
+        const newClient = await createClient({
+          name: data.client_name,
+          phone: data.client_phone,
+          address: data.client_address || null,
+        }) as { id: number };
+        clientId = newClient.id;
+      } catch (err) {
+        console.error('Failed to auto-create client:', err);
+      }
+    }
+
     await onSave({
-      client_id: selectedClientId,
+      client_id: clientId,
       client_name: data.client_name,
       client_phone: data.client_phone,
       client_address: data.client_address || null,
@@ -141,7 +155,7 @@ export function VisitForm({ open, onClose, onSave, technicians, clients, initial
     
     // update queue date for the assigned tech
     if (!initial && tech) {
-      const queueType = data.visit_type === 'maintenance' ? 'maintenance' : 'installation';
+      const queueType = data.visit_type === 'maintenance' ? 'maintenance' : data.visit_type === 'followup' ? 'followup' : 'installation';
       await skipTechnician({ id: tech.id, queueType });
     }
   };
@@ -214,6 +228,7 @@ export function VisitForm({ open, onClose, onSave, technicians, clients, initial
                   }
                 })}
                 onFocus={() => setShowClientDropdown(true)}
+                onBlur={() => setTimeout(() => setShowClientDropdown(false), 200)}
                 placeholder="ابحث عن عميل أو اكتب اسماً جديداً..."
                 className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand)]"
               />
