@@ -142,4 +142,6 @@ export const registerDbHandlers = () => {
       return { success: false, error: err.message };
     }
   });
+
+  handle('getTechnicianStats', () => techniciansRepo.getTechnicianStats());
 };

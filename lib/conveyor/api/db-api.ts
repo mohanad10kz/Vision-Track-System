@@ -68,4 +68,5 @@ export class DbApi extends ConveyorApi {
   getDbPath = () => this.invoke('getDbPath');
   backupDatabase = () => this.invoke('backupDatabase');
   restoreDatabase = () => this.invoke('restoreDatabase');
+  getTechnicianStats = () => this.invoke('getTechnicianStats');
 }

@@ -239,4 +239,8 @@ export const dbIpcSchema = {
       error: z.string().optional(),
     }),
   },
+  getTechnicianStats: {
+    args: z.tuple([]),
+    return: z.any(),
+  },
 };

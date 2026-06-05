@@ -90,4 +90,32 @@ export const techniciansRepo = {
     const info = getDb().prepare('DELETE FROM technicians WHERE id = ?').run(id);
     return info.changes > 0;
   },
+
+  getTechnicianStats: () => {
+    return getDb().prepare(`
+      SELECT 
+        t.id,
+        t.name,
+        t.group_id,
+        tg.name as group_name,
+        COUNT(CASE WHEN v.visit_type = 'installation' THEN 1 END) as installations,
+        COUNT(CASE WHEN v.visit_type = 'maintenance' THEN 1 END) as maintenance,
+        COUNT(CASE WHEN v.visit_type = 'survey' THEN 1 END) as surveys,
+        COUNT(v.id) as total
+      FROM technicians t
+      LEFT JOIN tech_groups tg ON t.group_id = tg.id
+      LEFT JOIN visits v ON t.id = v.technician_id AND v.status = 'completed'
+      GROUP BY t.id
+      ORDER BY total DESC
+    `).all() as {
+      id: number;
+      name: string;
+      group_id: number | null;
+      group_name: string | null;
+      installations: number;
+      maintenance: number;
+      surveys: number;
+      total: number;
+    }[];
+  },
 };
