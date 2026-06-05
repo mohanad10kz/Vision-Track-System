@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   --window-icon-height: 16px;
-  --window-title-margin: 42px;
+  --window-title-margin: 148px;
   --window-titlebar-height: 40px;
   --window-titlebar-font-size: 14px;
   --window-scrollbar-width: 12px;
@@ -9,20 +9,20 @@
   --window-background-transition-duration: 0.3s;
   --window-c-popup-font-weight: normal;
 
-  --window-c-background: #1c1c1c;
-  --window-c-titlebar-background: #282828;
-  --window-c-titlebar-border: transparent;
-  --window-c-text: #ffffffc8;
-  --window-c-hover: #3c3c3c;
-  --window-c-popup-background: #282828;
-  --window-c-popup-border: #3c3c3c;
+  --window-c-background: var(--color-bg-base, #0D1117);
+  --window-c-titlebar-background: var(--color-bg-base, #0D1117);
+  --window-c-titlebar-border: var(--color-border, #30363D);
+  --window-c-text: var(--color-text-primary, #E6EDF3);
+  --window-c-hover: var(--color-bg-hover, #30363D);
+  --window-c-popup-background: var(--color-bg-surface, #161B22);
+  --window-c-popup-border: var(--color-border, #30363D);
   --window-c-popup-shadow: #00000080;
-  --window-c-separator: #80808033;
-  --window-c-control-hover: #0000003d;
+  --window-c-separator: var(--color-border-subtle, #21262D);
+  --window-c-control-hover: var(--color-bg-hover, #30363D);
   --window-c-control-close-hover: #c42b1c;
-  --window-c-scrollbar-track: #1e1e1ec6;
-  --window-c-scrollbar-thumb: #88888863;
-  --window-c-scrollbar-thumb-hover: #555;
+  --window-c-scrollbar-track: var(--color-bg-base, #0D1117);
+  --window-c-scrollbar-thumb: var(--color-sidebar-border, #21262D);
+  --window-c-scrollbar-thumb-hover: var(--color-bg-hover, #30363D);
   --window-c-text-shadow: #000000a8;
 }
 
@@ -115,8 +115,9 @@
 .window-titlebar-controls {
   display: flex;
   position: absolute;
-  right: 0;
+  left: 0;
   top: 0;
+  height: 100%;
   -webkit-app-region: no-drag;
 }
 
@@ -183,8 +184,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 30px;
+  width: 46px;
+  height: 100%;
   cursor: pointer;
   background-color: transparent;
 }

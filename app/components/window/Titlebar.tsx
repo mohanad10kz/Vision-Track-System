@@ -29,11 +29,7 @@ export const Titlebar = () => {
 
   return (
     <div className={`window-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}>
-      {wcontext?.platform !== 'darwin' && (
-        <div className="window-titlebar-icon">
-          <img src={icon} />
-        </div>
-      )}
+      {wcontext?.platform !== 'darwin' && <TitlebarControls />}
 
       <div
         className="window-titlebar-title"
@@ -43,7 +39,6 @@ export const Titlebar = () => {
         {title}
       </div>
       {menusVisible && <TitlebarMenu />}
-      {wcontext?.platform === 'win32' && <TitlebarControls />}
     </div>
   )
 }
@@ -53,9 +48,9 @@ const TitlebarControls = () => {
 
   return (
     <div className="window-titlebar-controls">
-      {wcontext?.minimizable && <TitlebarControlButton label="minimize" svgPath={SVG_PATHS.minimize} />}
-      {wcontext?.maximizable && <TitlebarControlButton label="maximize" svgPath={SVG_PATHS.maximize} />}
       <TitlebarControlButton label="close" svgPath={SVG_PATHS.close} />
+      {wcontext?.maximizable !== false && <TitlebarControlButton label="maximize" svgPath={SVG_PATHS.maximize} />}
+      {wcontext?.minimizable !== false && <TitlebarControlButton label="minimize" svgPath={SVG_PATHS.minimize} />}
     </div>
   )
 }

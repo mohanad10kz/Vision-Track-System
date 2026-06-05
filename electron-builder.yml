@@ -1,5 +1,5 @@
 appId: com.guasam.era
-productName: electron-react-app
+productName: VisionTrack
 asar: true
 asarUnpack:
   - resources/**
