@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { 
-  LayoutDashboard, MapPin, Wrench, AlertCircle, PhoneCall,
+  LayoutDashboard, MapPin, Wrench, PhoneCall,
   CheckCircle, Users, Activity, FileText
 } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
@@ -36,13 +36,6 @@ export function Dashboard() {
   }
 
   const currentDate = format(new Date(), 'EEEE، d MMMM yyyy', { locale: ar });
-
-  const visitTypeColors: Record<string, string> = {
-    installation: 'var(--color-installation, #8B5CF6)',
-    maintenance: 'var(--color-maintenance, #F59E0B)',
-    survey: 'var(--color-survey, #06B6D4)',
-    followup: 'var(--color-followup, #6B7280)',
-  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden pr-[240px]">
@@ -85,15 +78,15 @@ export function Dashboard() {
 
         {/* Middle Row: Chart & Today Visits */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Today Notes */}
-          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-80">
+          {/* Notes */}
+          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-90">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-              <FileText size={16} className="text-blue-400" /> ملاحظات اليوم
+              <FileText size={16} className="text-blue-400" /> الملاحظات
             </h3>
             <div className="flex-1 overflow-y-auto pr-2 space-y-3">
               {data.todayNotes.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] text-sm">
-                  لا توجد ملاحظات لليوم
+                  لا توجد ملاحظات حالياً
                 </div>
               ) : (
                 data.todayNotes.map(note => (
@@ -109,25 +102,27 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* Today Visits List */}
-          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-80">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">زيارات اليوم</h3>
+          {/* Scheduled Visits List */}
+          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-90">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">الزيارات المجدولة</h3>
             <div className="flex-1 overflow-y-auto pr-2 space-y-3">
               {data.todayVisits.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] text-sm">
-                  لا توجد زيارات مجدولة لليوم
+                  لا توجد زيارات مجدولة حالياً
                 </div>
               ) : (
                 data.todayVisits.map(visit => (
                   <div key={visit.id} className="flex items-start gap-3 p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border)]">
-                    <div className="text-xs font-mono text-[var(--color-text-secondary)] w-12 shrink-0 pt-0.5">
-                      {visit.visit_time || '--:--'}
+                    <div className="text-xs font-mono text-[var(--color-text-secondary)] w-24 shrink-0 pt-0.5">
+                      {visit.visit_date} {visit.visit_time || '--:--'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <VisitTypeBadge type={visit.visit_type} />
                         <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{visit.client_name}</span>
-                        <StatusBadge status={visit.status} className="mr-auto" />
+                        <span  className="mr-auto" >
+                        <StatusBadge status={visit.status}/>
+                        </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] truncate">
                         <MapPin size={12} /> {visit.client_address || 'بدون عنوان'}
@@ -142,15 +137,15 @@ export function Dashboard() {
 
         {/* Bottom Row: Urgent Tasks & Followup Calls */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Today Tasks */}
-          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-72">
+          {/* Tasks */}
+          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-90">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-              <CheckCircle size={16} className="text-emerald-400" /> مهام اليوم
+              <CheckCircle size={16} className="text-emerald-400" /> المهام
             </h3>
             <div className="flex-1 overflow-y-auto pr-2 space-y-3">
               {data.todayTasks.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] text-sm">
-                  لا توجد مهام لليوم
+                  لا توجد مهام حالياً
                 </div>
               ) : (
                 data.todayTasks.map(task => (
@@ -167,7 +162,7 @@ export function Dashboard() {
           </div>
 
           {/* Followup Calls */}
-          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-72">
+          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex flex-col h-90">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] mb-4">
               <PhoneCall size={16} className="text-amber-400" /> اتصالات تحتاج متابعة
             </h3>

@@ -17,14 +17,14 @@ export const dashboardRepo = {
     // 4. Total Clients Count
     const totalClients = db.prepare('SELECT count(*) as count FROM clients').get() as { count: number };
 
-    // 5. Today Notes (Active Only)
-    const todayNotes = db.prepare('SELECT * FROM notes WHERE (date(created_at) = ? OR date(updated_at) = ?) AND archived_at IS NULL ORDER BY updated_at DESC LIMIT 10').all(today, today);
+    // 5. Notes (status = 'pending' or 'inprogress')
+    const todayNotes = db.prepare("SELECT * FROM notes WHERE status IN ('pending', 'inprogress') AND archived_at IS NULL ORDER BY updated_at DESC LIMIT 10").all();
 
-    // 6. Today Visits
-    const todayVisitsList = db.prepare('SELECT * FROM visits WHERE date(visit_date) = ? ORDER BY visit_time ASC').all(today);
+    // 6. Scheduled Visits (status = 'scheduled')
+    const todayVisitsList = db.prepare("SELECT * FROM visits WHERE status = 'scheduled' AND archived_at IS NULL ORDER BY visit_date ASC, visit_time ASC LIMIT 10").all();
 
-    // 7. Today Tasks
-    const todayTasks = db.prepare('SELECT * FROM tasks WHERE (date(created_at) = ? OR date(due_date) = ?) AND archived_at IS NULL ORDER BY created_at DESC LIMIT 10').all(today, today);
+    // 7. Pending Tasks (status != 'done')
+    const todayTasks = db.prepare("SELECT * FROM tasks WHERE status != 'done' AND archived_at IS NULL ORDER BY created_at DESC LIMIT 10").all();
 
     // 8. Pending Followup Calls
     const pendingFollowupCalls = db.prepare('SELECT * FROM call_logs WHERE requires_followup = 1 AND followup_done = 0 ORDER BY followup_date ASC LIMIT 5').all();

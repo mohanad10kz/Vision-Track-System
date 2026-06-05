@@ -82,7 +82,7 @@ export function Settings() {
         <div className="max-w-3xl space-y-6">
           
           {/* Section 1: Shop Info */}
-          <section className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+          {/* <section className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--color-border)] flex items-center gap-2">
               <Store size={18} className="text-[var(--color-brand)]" />
               <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">معلومات المحل</h2>
@@ -128,7 +128,7 @@ export function Settings() {
                 </button>
               </div>
             </div>
-          </section>
+          </section> */}
 
           {/* Section 2: General Settings (Theme) */}
           <section className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
