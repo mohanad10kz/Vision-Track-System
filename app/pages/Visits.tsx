@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import { format, addDays } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { format, addDays, subDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { ar } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MapPin, Clock, User, MoreVertical,
   Hammer, Wrench, RefreshCw, CalendarDays, CheckCircle,
-  XCircle, Pause, ChevronDown, Trash2, Edit2
+  XCircle, Trash2, Edit2, Archive
 } from 'lucide-react';
+import {
+  Pagination, PaginationContent, PaginationItem,
+  PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis,
+} from '@/app/components/ui/pagination';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { SearchInput } from '@/app/components/shared/SearchInput';
 import { VisitTypeBadge } from '@/app/components/shared/VisitTypeBadge';
@@ -16,7 +21,7 @@ import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useVisits } from '@/app/hooks/use-visits';
 import { useClients } from '@/app/hooks/use-clients';
 import { useTechnicians } from '@/app/hooks/use-technicians';
-import type { Visit, VisitType, VisitStatus, CreateVisitInput } from '@/app/types/visit.types';
+import type { Visit, VisitType, VisitStatus, CreateVisitInput, UpdateVisitInput } from '@/app/types/visit.types';
 import type { Technician } from '@/app/types/technician.types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -428,17 +433,27 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
 type TabFilter = 'all' | VisitType;
 
 export function Visits() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editVisit, setEditVisit] = useState<Visit | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { visits, loading, today, tomorrow, upcoming, past, create, update, remove, changeStatus } = useVisits(
+  const [page, setPage] = useState(1);
+  const LIMIT = 8;
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, search]);
+
+  const { visits, loading, create, update, remove, changeStatus } = useVisits(
     activeTab === 'all' ? undefined : activeTab as VisitType
   );
   const { clients } = useClients();
   const { technicians } = useTechnicians();
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   const filteredVisits = (list: Visit[]) =>
     search
@@ -498,29 +513,33 @@ export function Visits() {
     );
   };
 
+  // استخراج آخر 7 أيام تحتوي على بيانات في قاعدة البيانات
+  const uniqueDates = Array.from(new Set(visits.map(v => v.visit_date))).sort((a, b) => a.localeCompare(b));
+  const targetDates = uniqueDates.slice(-7);
+
+  const windowVisits = visits.filter(v => targetDates.includes(v.visit_date));
+  const allFiltered = filteredVisits(windowVisits);
+  const total = allFiltered.length;
+
+  const startIndex = (page - 1) * LIMIT;
+  const paginatedVisits = allFiltered.slice(startIndex, startIndex + LIMIT);
+
   const renderAllGroups = () => {
-    const allFiltered = filteredVisits(visits);
-    if (allFiltered.length === 0) return null;
+    if (paginatedVisits.length === 0) return null;
     
-    const grouped = allFiltered.reduce((acc, v) => {
+    const grouped = paginatedVisits.reduce((acc, v) => {
       if (!acc[v.visit_date]) acc[v.visit_date] = [];
       acc[v.visit_date].push(v);
       return acc;
     }, {} as Record<string, Visit[]>);
 
     const dates = Object.keys(grouped);
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
     const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
     
-    const todayGroup = dates.filter(d => d === todayStr);
-    const tomorrowGroup = dates.filter(d => d === tomorrowStr);
-    const upcomingDates = dates.filter(d => d > tomorrowStr).sort((a, b) => a.localeCompare(b));
-    const pastDates = dates.filter(d => d < todayStr).sort((a, b) => b.localeCompare(a));
+    const sortedDates = dates.sort((a, b) => a.localeCompare(b));
 
-    const finalOrder = [...todayGroup, ...tomorrowGroup, ...upcomingDates, ...pastDates];
-
-    return finalOrder.map(date => {
-      let label = format(new Date(date), 'EEEE d MMMM yyyy', { locale: ar });
+    return sortedDates.map(date => {
+      let label = format(new Date(date + 'T12:00:00'), 'EEEE d MMMM yyyy', { locale: ar });
       if (date === todayStr) label = `اليوم — ${label}`;
       else if (date === tomorrowStr) label = `الغد — ${label}`;
       
@@ -534,19 +553,28 @@ export function Visits() {
       <div className="p-6 pb-0">
         <PageHeader
           title="الزيارات الميدانية"
-          description="جميع الزيارات المجدولة والمكتملة"
+          description="زيارات آخر 7 أيام والمستقبلية"
           icon={<CalendarDays size={20} />}
           action={
-            <button
-              onClick={() => {
-                setEditVisit(null);
-                setShowForm(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] transition-colors"
-            >
-              <Plus size={16} />
-              زيارة جديدة
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/visits/archive')}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg hover:border-[var(--color-brand)]/50 transition-colors"
+              >
+                <Archive size={15} />
+                الأرشيف
+              </button>
+              <button
+                onClick={() => {
+                  setEditVisit(null);
+                  setShowForm(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] transition-colors"
+              >
+                <Plus size={16} />
+                زيارة جديدة
+              </button>
+            </div>
           }
         />
 
@@ -583,7 +611,7 @@ export function Visits() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
         {loading ? (
           <div className="flex flex-col gap-3">
             {[...Array(4)].map((_, i) => (
@@ -601,12 +629,66 @@ export function Visits() {
               setShowForm(true);
             }}
           />
+        ) : allFiltered.length === 0 ? (
+          <EmptyState
+            icon={<CalendarDays size={48} />}
+            title="لا توجد زيارات في الأيام السبعة الأخيرة"
+            description="يمكنك عرض الزيارات القديمة والمكتملة في الأرشيف"
+            actionLabel="عرض الأرشيف"
+            onAction={() => navigate('/visits/archive')}
+          />
         ) : (
-          <>
-            {renderAllGroups()}
-          </>
+          renderAllGroups()
         )}
       </div>
+
+      {/* Pagination — shadcn */}
+      {!loading && total > LIMIT && (
+        <div className="px-6 py-3 border-t border-[var(--color-border)] shrink-0 bg-[var(--color-bg-surface)]">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: Math.ceil(total / LIMIT) }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === Math.ceil(total / LIMIT) || Math.abs(p - page) <= 1)
+                .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, i) =>
+                  item === '...' ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        isActive={page === item}
+                        onClick={() => setPage(item as number)}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )
+              }
+
+              <PaginationItem>
+                <PaginationNext
+                  disabled={page >= Math.ceil(total / LIMIT)}
+                  onClick={() => setPage(p => p + 1)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Form Modal */}
       <AnimatePresence>

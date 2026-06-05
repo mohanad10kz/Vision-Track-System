@@ -27,7 +27,7 @@ export const dbIpcSchema = {
     return: z.any(),
   },
   getArchivedTasks: {
-    args: z.tuple([z.object({ from: z.string().optional(), to: z.string().optional(), search: z.string().optional() })]),
+    args: z.tuple([z.object({ from: z.string().optional(), to: z.string().optional(), search: z.string().optional(), page: z.number().optional(), limit: z.number().optional() })]),
     return: z.any(),
   },
 
@@ -57,7 +57,7 @@ export const dbIpcSchema = {
     return: z.any(),
   },
   getArchivedNotes: {
-    args: z.tuple([z.object({ from: z.string().optional(), to: z.string().optional(), search: z.string().optional() })]),
+    args: z.tuple([z.object({ from: z.string().optional(), to: z.string().optional(), search: z.string().optional(), page: z.number().optional(), limit: z.number().optional() })]),
     return: z.any(),
   },
 
@@ -91,6 +91,10 @@ export const dbIpcSchema = {
   },
   deleteVisit: {
     args: z.tuple([z.object({ id: z.number() })]),
+    return: z.any(),
+  },
+  getArchivedVisits: {
+    args: z.tuple([z.object({ from: z.string().optional(), to: z.string().optional(), search: z.string().optional(), page: z.number().optional(), limit: z.number().optional() })]),
     return: z.any(),
   },
 

@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { format, subDays, subMonths, startOfWeek } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ArrowRight, Archive, CheckCircle2 } from 'lucide-react';
+import {
+  Pagination, PaginationContent, PaginationItem,
+  PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis,
+} from '@/app/components/ui/pagination';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { SearchInput } from '@/app/components/shared/SearchInput';
 import { EmptyState } from '@/app/components/shared/EmptyState';
@@ -22,7 +26,7 @@ export function NoteArchive() {
   const [customTo, setCustomTo] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const LIMIT = 10;
+  const LIMIT = 8;
 
   const getDateRange = (filter: DateFilter) => {
     const now = new Date();
@@ -123,12 +127,12 @@ export function NoteArchive() {
       {/* العدد */}
       {!loading && (
         <p className="text-sm text-[var(--color-text-muted)]">
-          {notes.length} ملاحظة مؤرشفة
+          {total > 0 ? `${total} ملاحظة مؤرشفة` : `${notes.length} ملاحظة مؤرشفة`}
         </p>
       )}
 
       {/* القائمة */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex flex-col gap-2">
             {[...Array(5)].map((_, i) => (
@@ -178,32 +182,57 @@ export function NoteArchive() {
                 </span>
               </div>
             ))}
-
-            {/* Pagination Controls */}
-            {total > LIMIT && (
-              <div className="flex items-center justify-center gap-2 py-4 mt-2 border-t border-[var(--color-border)]">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage(p => p - 1)}
-                  className="px-3 py-1.5 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
-                >
-                  السابق
-                </button>
-                <span className="text-sm text-[var(--color-text-muted)]">
-                  صفحة {page} من {Math.ceil(total / LIMIT)}
-                </span>
-                <button
-                  disabled={page >= Math.ceil(total / LIMIT)}
-                  onClick={() => setPage(p => p + 1)}
-                  className="px-3 py-1.5 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
-                >
-                  التالي
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Pagination — shadcn */}
+      {!loading && total > LIMIT && (
+        <div className="py-3 border-t border-[var(--color-border)] shrink-0">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: Math.ceil(total / LIMIT) }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === Math.ceil(total / LIMIT) || Math.abs(p - page) <= 1)
+                .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, i) =>
+                  item === '...' ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        isActive={page === item}
+                        onClick={() => setPage(item as number)}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )
+              }
+
+              <PaginationItem>
+                <PaginationNext
+                  disabled={page >= Math.ceil(total / LIMIT)}
+                  onClick={() => setPage(p => p + 1)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 }

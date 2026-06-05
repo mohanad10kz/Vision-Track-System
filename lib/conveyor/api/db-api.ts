@@ -8,7 +8,7 @@ export class DbApi extends ConveyorApi {
   updateTask = (id: number, input: unknown) => this.invoke('updateTask', { id, input });
   updateTaskStatus = (id: number, status: string, position: number) => this.invoke('updateTaskStatus', { id, status, position });
   deleteTask = (id: number) => this.invoke('deleteTask', { id });
-  getArchivedTasks = (filter: { from?: string; to?: string; search?: string }) => this.invoke('getArchivedTasks', filter);
+  getArchivedTasks = (filter: { from?: string; to?: string; search?: string; page?: number; limit?: number }) => this.invoke('getArchivedTasks', filter);
 
   // ==================== NOTES ====================
   getNotes = () => this.invoke('getNotes');
@@ -17,7 +17,7 @@ export class DbApi extends ConveyorApi {
   updateNote = (id: number, input: unknown) => this.invoke('updateNote', { id, input });
   updateNoteStatus = (id: number, status: string, position: number) => this.invoke('updateNoteStatus', { id, status, position });
   deleteNote = (id: number) => this.invoke('deleteNote', { id });
-  getArchivedNotes = (filter: { from?: string; to?: string; search?: string }) => this.invoke('getArchivedNotes', filter);
+  getArchivedNotes = (filter: { from?: string; to?: string; search?: string; page?: number; limit?: number }) => this.invoke('getArchivedNotes', filter);
 
   // ==================== VISITS ====================
   getVisits = (filter?: { type?: string; status?: string; technicianId?: number; from?: string; to?: string; search?: string }) => this.invoke('getVisits', filter);
@@ -26,6 +26,7 @@ export class DbApi extends ConveyorApi {
   updateVisit = (id: number, input: unknown) => this.invoke('updateVisit', { id, input });
   updateVisitStatus = (id: number, status: string, resolutionNotes?: string) => this.invoke('updateVisitStatus', { id, status, resolutionNotes });
   deleteVisit = (id: number) => this.invoke('deleteVisit', { id });
+  getArchivedVisits = (filter: { from?: string; to?: string; search?: string; page?: number; limit?: number }) => this.invoke('getArchivedVisits', filter);
 
   // ==================== CLIENTS ====================
   getClients = (filter?: { search?: string }) => this.invoke('getClients', filter);

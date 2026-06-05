@@ -48,12 +48,13 @@ export const visitsRepo = {
         client_id, client_name, client_phone, client_address,
         visit_type, visit_date, visit_time,
         technician_id, technician_name,
-        status, notes, resolution_notes
+        status, notes, resolution_notes, archived_at
       ) VALUES (
         @client_id, @client_name, @client_phone, @client_address,
         @visit_type, @visit_date, @visit_time,
         @technician_id, @technician_name,
-        @status, @notes, @resolution_notes
+        @status, @notes, @resolution_notes,
+        CASE WHEN @status = 'completed' THEN datetime('now', 'localtime') ELSE NULL END
       )
     `);
 
@@ -87,6 +88,15 @@ export const visitsRepo = {
     });
 
     if (updates.length === 0) return false;
+
+    if (input.status !== undefined) {
+      if (input.status === 'completed') {
+        updates.push("archived_at = datetime('now', 'localtime')");
+      } else {
+        updates.push("archived_at = NULL");
+      }
+    }
+
     updates.push("updated_at = datetime('now', 'localtime')");
 
     const query = `UPDATE visits SET ${updates.join(', ')} WHERE id = @id`;
@@ -97,9 +107,12 @@ export const visitsRepo = {
   updateStatus: (id: number, status: string, resolutionNotes?: string): void => {
     getDb().prepare(`
       UPDATE visits
-      SET status = ?, resolution_notes = COALESCE(?, resolution_notes), updated_at = datetime('now', 'localtime')
+      SET status = ?,
+          resolution_notes = COALESCE(?, resolution_notes),
+          archived_at = CASE WHEN ? = 'completed' THEN datetime('now', 'localtime') ELSE NULL END,
+          updated_at = datetime('now', 'localtime')
       WHERE id = ?
-    `).run(status, resolutionNotes ?? null, id);
+    `).run(status, resolutionNotes ?? null, status, id);
   },
 
   delete: (id: number): boolean => {
@@ -113,13 +126,12 @@ export const visitsRepo = {
       SET archived_at = datetime('now', 'localtime')
       WHERE status = 'completed'
         AND archived_at IS NULL
-        AND updated_at < datetime('now', 'localtime', '-7 days')
     `).run();
     return result.changes;
   },
 
   findArchived: (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => {
-    let query = `SELECT * FROM visits WHERE archived_at IS NOT NULL`;
+    let query = `SELECT * FROM visits WHERE archived_at IS NOT NULL AND status = 'completed'`;
     const params: (string | number)[] = [];
 
     if (filter.from) {
