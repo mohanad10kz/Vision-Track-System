@@ -1,4 +1,7 @@
 import { handle } from '@/lib/main/shared';
+import { dialog } from 'electron';
+import { promises as fs } from 'fs';
+import { getDbPath, getDb, closeDb, initDb } from '../../database/db';
 import { tasksRepo } from '../../database/repositories/tasks.repo';
 import { notesRepo } from '../../database/repositories/notes.repo';
 import { visitsRepo } from '../../database/repositories/visits.repo';
@@ -71,4 +74,72 @@ export const registerDbHandlers = () => {
 
   // ==================== DASHBOARD ====================
   handle('getDashboardData', () => dashboardRepo.getDashboardData());
+
+  // ==================== BACKUP & RESTORE ====================
+  handle('getDbPath', () => getDbPath());
+
+  handle('backupDatabase', async () => {
+    try {
+      const db = getDb();
+
+      const { filePath, canceled } = await dialog.showSaveDialog({
+        title: 'حفظ النسخة الاحتياطية',
+        defaultPath: `visiontrack_backup_${new Date().toISOString().split('T')[0]}.db`,
+        filters: [
+          { name: 'SQLite Database', extensions: ['db', 'sqlite'] },
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      });
+
+      if (canceled || !filePath) {
+        return { success: false, cancelled: true };
+      }
+
+      await db.backup(filePath);
+      return { success: true, path: filePath };
+    } catch (err: any) {
+      console.error('Backup database failed:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  handle('restoreDatabase', async () => {
+    try {
+      const dbPath = getDbPath();
+
+      const { filePaths, canceled } = await dialog.showOpenDialog({
+        title: 'استعادة قاعدة البيانات من ملف',
+        properties: ['openFile'],
+        filters: [
+          { name: 'SQLite Database', extensions: ['db', 'sqlite'] },
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      });
+
+      if (canceled || filePaths.length === 0) {
+        return { success: false, cancelled: true };
+      }
+
+      const selectedPath = filePaths[0];
+
+      // Close the current database connection
+      closeDb();
+
+      // Copy the selected file over the live database
+      await fs.copyFile(selectedPath, dbPath);
+
+      // Reinitialize the database (runs migrations if needed)
+      initDb();
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Restore database failed:', err);
+      try {
+        initDb();
+      } catch (e) {
+        console.error('Reinitializing database after restore failed failed:', e);
+      }
+      return { success: false, error: err.message };
+    }
+  });
 };

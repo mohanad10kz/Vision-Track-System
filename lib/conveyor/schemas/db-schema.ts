@@ -216,4 +216,27 @@ export const dbIpcSchema = {
     args: z.tuple([z.object({ id: z.number() })]),
     return: z.any(),
   },
+
+  // ==================== BACKUP & RESTORE ====================
+  getDbPath: {
+    args: z.tuple([]),
+    return: z.string(),
+  },
+  backupDatabase: {
+    args: z.tuple([]),
+    return: z.object({
+      success: z.boolean(),
+      cancelled: z.boolean().optional(),
+      error: z.string().optional(),
+      path: z.string().optional(),
+    }),
+  },
+  restoreDatabase: {
+    args: z.tuple([]),
+    return: z.object({
+      success: z.boolean(),
+      cancelled: z.boolean().optional(),
+      error: z.string().optional(),
+    }),
+  },
 };

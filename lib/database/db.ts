@@ -5,11 +5,22 @@ import { createTables, runMigrations } from './migrations';
 
 let db: Database.Database | null = null;
 
-export const initDb = () => {
+export const getDbPath = () => {
+  return path.join(app.getPath('userData'), 'visiontrack.db');
+};
+
+export const closeDb = () => {
+  if (db) {
+    db.close();
+    db = null;
+  }
+};
+
+export const initDb = (): Database.Database => {
   if (db) return db;
 
   // Use the user data path to ensure the db is preserved across updates
-  const dbPath = path.join(app.getPath('userData'), 'visiontrack.db');
+  const dbPath = getDbPath();
   
   db = new Database(dbPath);
   
@@ -22,12 +33,12 @@ export const initDb = () => {
   // Run safe migrations (adds new columns without deleting data)
   runMigrations(db);
 
-  return db;
+  return db!;
 };
 
-export const getDb = () => {
+export const getDb = (): Database.Database => {
   if (!db) {
     return initDb();
   }
-  return db;
+  return db!;
 };

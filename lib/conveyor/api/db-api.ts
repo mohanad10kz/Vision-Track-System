@@ -63,4 +63,9 @@ export class DbApi extends ConveyorApi {
   createTechGroup = (input: unknown) => this.invoke('createTechGroup', input);
   updateTechGroup = (id: number, input: unknown) => this.invoke('updateTechGroup', { id, input });
   deleteTechGroup = (id: number) => this.invoke('deleteTechGroup', { id });
+
+  // ==================== BACKUP & RESTORE ====================
+  getDbPath = () => this.invoke('getDbPath');
+  backupDatabase = () => this.invoke('backupDatabase');
+  restoreDatabase = () => this.invoke('restoreDatabase');
 }

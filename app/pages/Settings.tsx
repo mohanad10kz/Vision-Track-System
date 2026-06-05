@@ -1,31 +1,71 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, Store, Palette, Database, Info,
   Save, UploadCloud, DownloadCloud, Moon, Sun, Monitor
 } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
 import { toast } from 'sonner';
+import { useConveyor } from '@/app/hooks/use-conveyor';
+import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 
 export function Settings() {
+  const dbApi = useConveyor('db');
   const [shopName, setShopName] = useState('VisionTrack Solutions');
   const [shopPhone, setShopPhone] = useState('092-1234567');
   const [shopAddress, setShopAddress] = useState('بنغازي، شارع دبي');
   const [theme, setTheme] = useState('dark');
+  const [dbPath, setDbPath] = useState('');
+  const [showConfirmRestore, setShowConfirmRestore] = useState(false);
+
+  useEffect(() => {
+    dbApi.getDbPath()
+      .then((path) => setDbPath(path))
+      .catch((err) => console.error('Failed to get database path:', err));
+  }, []);
 
   const handleSaveInfo = () => {
     // Save info logic here (e.g., in a settings store or DB)
     toast.success('تم حفظ معلومات المحل بنجاح');
   };
 
-  const handleBackup = () => {
-    toast.info('جاري إنشاء نسخة احتياطية...');
-    setTimeout(() => toast.success('تم حفظ النسخة الاحتياطية بنجاح'), 1500);
+  const handleBackup = async () => {
+    const toastId = toast.loading('جاري إنشاء نسخة احتياطية...');
+    try {
+      const res = await dbApi.backupDatabase();
+      if (res.success) {
+        toast.success(`تم حفظ النسخة الاحتياطية بنجاح في:\n${res.path}`, { id: toastId });
+      } else if (res.cancelled) {
+        toast.dismiss(toastId);
+      } else {
+        toast.error(`فشل النسخ الاحتياطي: ${res.error}`, { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(`خطأ: ${err.message}`, { id: toastId });
+    }
   };
 
   const handleRestore = () => {
-    toast.info('جاري استعادة البيانات...');
-    setTimeout(() => toast.success('تم استعادة البيانات بنجاح'), 2000);
+    setShowConfirmRestore(true);
+  };
+
+  const executeRestore = async () => {
+    setShowConfirmRestore(false);
+    const toastId = toast.loading('جاري استعادة البيانات وإعادة تحميل التطبيق...');
+    try {
+      const res = await dbApi.restoreDatabase();
+      if (res.success) {
+        toast.success('تم استعادة البيانات بنجاح! جاري إعادة تشغيل التطبيق...', { id: toastId });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else if (res.cancelled) {
+        toast.dismiss(toastId);
+      } else {
+        toast.error(`فشل استعادة البيانات: ${res.error}`, { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(`خطأ: ${err.message}`, { id: toastId });
+    }
   };
 
   return (
@@ -150,7 +190,7 @@ export function Settings() {
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">مسار الملف المحلي</label>
                 <input
                   type="text"
-                  value="C:\Users\AppData\Roaming\VisionTrack\visiontrack.db"
+                  value={dbPath || 'جاري تحميل مسار قاعدة البيانات...'}
                   readOnly
                   dir="ltr"
                   className="w-full bg-[var(--color-bg-base)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-muted)] font-mono opacity-70 cursor-not-allowed"
@@ -195,6 +235,17 @@ export function Settings() {
 
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showConfirmRestore}
+        onOpenChange={setShowConfirmRestore}
+        title="استعادة قاعدة البيانات"
+        description="هل أنت متأكد من استعادة قاعدة البيانات؟ سيتم استبدال البيانات الحالية بالكامل وإعادة تشغيل التطبيق."
+        confirmLabel="استعادة البيانات"
+        cancelLabel="إلغاء"
+        variant="destructive"
+        onConfirm={executeRestore}
+      />
     </div>
   );
 }
