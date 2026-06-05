@@ -186,4 +186,34 @@ export const dbIpcSchema = {
     args: z.tuple([]),
     return: z.any(),
   },
+
+  // ==================== TECH GROUPS & QUEUES ====================
+  getSurveysByClientPhone: {
+    args: z.tuple([z.object({ phone: z.string() })]),
+    return: z.any(),
+  },
+  getTechQueueByGroup: {
+    args: z.tuple([z.object({ groupId: z.number(), queueType: z.enum(['installation', 'maintenance']) })]),
+    return: z.any(),
+  },
+  skipTechnician: {
+    args: z.tuple([z.object({ id: z.number(), queueType: z.enum(['installation', 'maintenance']) })]),
+    return: z.any(),
+  },
+  getTechGroups: {
+    args: z.tuple([]),
+    return: z.any(),
+  },
+  createTechGroup: {
+    args: z.tuple([z.any()]),
+    return: z.any(),
+  },
+  updateTechGroup: {
+    args: z.tuple([z.object({ id: z.number(), input: z.any() })]),
+    return: z.any(),
+  },
+  deleteTechGroup: {
+    args: z.tuple([z.object({ id: z.number() })]),
+    return: z.any(),
+  },
 };

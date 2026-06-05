@@ -10,6 +10,7 @@ import { Visits } from './pages/Visits';
 import { VisitArchive } from './pages/VisitArchive';
 import { Clients } from './pages/Clients';
 import { Technicians } from './pages/Technicians';
+import { Reports } from './pages/Reports';
 import { CallLog } from './pages/CallLog';
 import { Settings } from './pages/Settings';
 import { Toaster } from './components/ui/sonner';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/visits/archive" element={<VisitArchive />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/technicians" element={<Technicians />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/calls" element={<CallLog />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

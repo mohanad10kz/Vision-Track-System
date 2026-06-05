@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Phone, XCircle, Edit2, Trash2, HardHat } from 'lucide-react';
+import { Plus, Phone, XCircle, Edit2, Trash2, HardHat, Users } from 'lucide-react';
 import { PageHeader } from '@/app/components/shared/PageHeader';
-import { StatusBadge } from '@/app/components/shared/StatusBadge';
 import { EmptyState } from '@/app/components/shared/EmptyState';
 import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
 import { useTechnicians } from '@/app/hooks/use-technicians';
@@ -12,6 +10,8 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { TechGroupManager } from '@/app/components/shared/TechGroupManager';
+import { useTechGroups } from '@/app/hooks/use-tech-groups';
 
 // ألوان Avatar للفنيين (دوارة حسب الـ id)
 const AVATAR_COLORS = [
@@ -45,6 +45,7 @@ const technicianSchema = z.object({
   phone: z.string().min(5, 'رقم الهاتف قصير جداً'),
   specialty: z.enum(['installation', 'maintenance', 'programming', 'all', '']).optional(),
   notes: z.string().optional(),
+  group_id: z.number().optional().nullable(),
 });
 type TechFormValues = z.infer<typeof technicianSchema>;
 
@@ -56,8 +57,11 @@ function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
       phone: initial?.phone ?? '',
       specialty: initial?.specialty ?? '',
       notes: initial?.notes ?? '',
+      group_id: initial?.group_id ?? null,
     }
   });
+
+  const { groups } = useTechGroups();
 
   const onSubmit = async (data: TechFormValues) => {
     await onSave({
@@ -65,6 +69,7 @@ function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
       phone: data.phone,
       specialty: (data.specialty || null) as TechnicianSpecialty | null,
       notes: data.notes || null,
+      group_id: data.group_id || null,
     });
     onClose();
   };
@@ -126,6 +131,18 @@ function TechnicianForm({ open, onClose, onSave, initial }: TechFormProps) {
                 <option value="maintenance">صيانة</option>
                 <option value="programming">برمجة</option>
                 <option value="all">الكل</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">المجموعة (اختياري)</label>
+              <select
+                {...register('group_id', { setValueAs: v => v === "" ? null : Number(v) })}
+                className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand)]"
+              >
+                <option value="">بدون مجموعة</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -255,6 +272,7 @@ function TechnicianCard({
 export function Technicians() {
   const { technicians, loading, create, update, changeStatus, remove } = useTechnicians();
   const [showForm, setShowForm] = useState(false);
+  const [showGroupsManager, setShowGroupsManager] = useState(false);
   const [editTech, setEditTech] = useState<Technician | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
@@ -286,13 +304,22 @@ export function Technicians() {
           description="فريق العمل الميداني"
           icon={<HardHat size={20} />}
           action={
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] transition-colors"
-            >
-              <Plus size={16} />
-              فني جديد
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowGroupsManager(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-elevated)] transition-colors"
+              >
+                <Users size={16} className="text-[var(--color-brand)]" />
+                المجموعات
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-dark)] transition-colors"
+              >
+                <Plus size={16} />
+                فني جديد
+              </button>
+            </div>
           }
         />
       </div>
@@ -344,6 +371,11 @@ export function Technicians() {
           />
         )}
       </AnimatePresence>
+
+      <TechGroupManager
+        open={showGroupsManager}
+        onClose={() => setShowGroupsManager(false)}
+      />
 
       <ConfirmDialog
         open={deleteId !== null}

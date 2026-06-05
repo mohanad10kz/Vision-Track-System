@@ -26,12 +26,22 @@ export const visitsRepo = {
 
     query += ` AND archived_at IS NULL`;
 
-    query += ` ORDER BY visit_date ASC, visit_time ASC`;
+    query += ` ORDER BY visit_date DESC, visit_time DESC`;
     return getDb().prepare(query).all(...params) as Visit[];
   },
 
   findById: (id: number): Visit | undefined => {
     return getDb().prepare('SELECT * FROM visits WHERE id = ?').get(id) as Visit | undefined;
+  },
+
+  findSurveysByClientPhone: (phone: string): Visit[] => {
+    return getDb().prepare(`
+      SELECT * FROM visits 
+      WHERE client_phone = ? 
+        AND visit_type = 'survey' 
+        AND status = 'completed'
+      ORDER BY visit_date DESC, visit_time DESC
+    `).all(phone) as Visit[];
   },
 
   countTodayForTechnician: (technicianId: number, today: string): number => {

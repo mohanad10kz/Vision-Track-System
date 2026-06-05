@@ -54,4 +54,13 @@ export class DbApi extends ConveyorApi {
 
   // ==================== DASHBOARD ====================
   getDashboardData = () => this.invoke('getDashboardData');
+
+  // ==================== TECH GROUPS & QUEUES ====================
+  getSurveysByClientPhone = (filter: { phone: string }) => this.invoke('getSurveysByClientPhone', filter);
+  getTechQueueByGroup = (filter: { groupId: number; queueType: 'installation' | 'maintenance' }) => this.invoke('getTechQueueByGroup', filter);
+  skipTechnician = (filter: { id: number; queueType: 'installation' | 'maintenance' }) => this.invoke('skipTechnician', filter);
+  getTechGroups = () => this.invoke('getTechGroups');
+  createTechGroup = (input: unknown) => this.invoke('createTechGroup', input);
+  updateTechGroup = (id: number, input: unknown) => this.invoke('updateTechGroup', { id, input });
+  deleteTechGroup = (id: number) => this.invoke('deleteTechGroup', { id });
 }

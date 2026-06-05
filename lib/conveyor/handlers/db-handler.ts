@@ -4,6 +4,7 @@ import { notesRepo } from '../../database/repositories/notes.repo';
 import { visitsRepo } from '../../database/repositories/visits.repo';
 import { clientsRepo } from '../../database/repositories/clients.repo';
 import { techniciansRepo } from '../../database/repositories/technicians.repo';
+import { techGroupsRepo } from '../../database/repositories/tech-groups.repo';
 import { callsRepo } from '../../database/repositories/calls.repo';
 import { dashboardRepo } from '../../database/repositories/dashboard.repo';
 
@@ -34,6 +35,7 @@ export const registerDbHandlers = () => {
   handle('updateVisitStatus', ({ id, status, resolutionNotes }: { id: number; status: string; resolutionNotes?: string }) => visitsRepo.updateStatus(id, status, resolutionNotes));
   handle('deleteVisit', ({ id }: { id: number }) => visitsRepo.delete(id));
   handle('getArchivedVisits', (filter: { from?: string; to?: string; search?: string, page?: number, limit?: number }) => visitsRepo.findArchived(filter));
+  handle('getSurveysByClientPhone', ({ phone }: { phone: string }) => visitsRepo.findSurveysByClientPhone(phone));
 
   // ==================== CLIENTS ====================
   handle('getClients', (filter?: { search?: string }) => clientsRepo.findAll(filter?.search));
@@ -50,6 +52,14 @@ export const registerDbHandlers = () => {
   handle('updateTechnicianStatus', ({ id, status }: { id: number; status: string }) => techniciansRepo.updateStatus(id, status));
   handle('deleteTechnician', ({ id }: { id: number }) => techniciansRepo.delete(id));
   handle('getTechnicianTodayVisits', ({ id, today }: { id: number; today: string }) => techniciansRepo.countTodayVisits(id, today));
+  handle('getTechQueueByGroup', ({ groupId, queueType }: { groupId: number; queueType: 'installation' | 'maintenance' }) => techniciansRepo.findQueueByGroup(groupId, queueType));
+  handle('skipTechnician', ({ id, queueType }: { id: number; queueType: 'installation' | 'maintenance' }) => techniciansRepo.updateQueueDate(id, queueType));
+
+  // ==================== TECH GROUPS ====================
+  handle('getTechGroups', () => techGroupsRepo.findAll());
+  handle('createTechGroup', (input: Parameters<typeof techGroupsRepo.create>[0]) => techGroupsRepo.create(input));
+  handle('updateTechGroup', ({ id, input }: { id: number; input: Parameters<typeof techGroupsRepo.update>[1] }) => techGroupsRepo.update(id, input));
+  handle('deleteTechGroup', ({ id }: { id: number }) => techGroupsRepo.delete(id));
 
   // ==================== CALLS ====================
   handle('getCalls', (filter?: { search?: string; contactType?: string; direction?: string; requiresFollowup?: boolean, page?: number, limit?: number }) => callsRepo.findAll(filter ?? undefined));

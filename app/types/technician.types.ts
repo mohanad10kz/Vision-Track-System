@@ -8,6 +8,9 @@ export interface Technician {
   specialty: TechnicianSpecialty | null;
   status: TechnicianStatus;
   notes: string | null;
+  group_id: number | null;
+  last_install_assigned_at: string | null;
+  last_maint_assigned_at: string | null;
   created_at: string;
   // computed field (not in DB, added by frontend)
   todayVisitsCount?: number;
@@ -18,6 +21,7 @@ export interface CreateTechnicianInput {
   phone: string;
   specialty?: TechnicianSpecialty | null;
   notes?: string | null;
+  group_id?: number | null;
 }
 
 export interface UpdateTechnicianInput {
@@ -26,4 +30,5 @@ export interface UpdateTechnicianInput {
   specialty?: TechnicianSpecialty | null;
   status?: TechnicianStatus;
   notes?: string | null;
+  group_id?: number | null;
 }

@@ -12,6 +12,16 @@ export const techniciansRepo = {
     return getDb().prepare('SELECT * FROM technicians WHERE id = ?').get(id) as Technician | undefined;
   },
 
+  findQueueByGroup: (groupId: number, queueType: 'installation' | 'maintenance'): Technician[] => {
+    const sortColumn = queueType === 'installation' ? 'last_install_assigned_at' : 'last_maint_assigned_at';
+    return getDb().prepare(`
+      SELECT * FROM technicians 
+      WHERE group_id = ? 
+        AND status = 'available'
+      ORDER BY ${sortColumn} ASC NULLS FIRST, id ASC
+    `).all(groupId) as Technician[];
+  },
+
   countTodayVisits: (id: number, today: string): number => {
     const result = getDb().prepare(`
       SELECT COUNT(*) as count FROM visits
@@ -22,8 +32,8 @@ export const techniciansRepo = {
 
   create: (input: CreateTechnicianInput): Technician => {
     const stmt = getDb().prepare(`
-      INSERT INTO technicians (name, phone, specialty, notes)
-      VALUES (@name, @phone, @specialty, @notes)
+      INSERT INTO technicians (name, phone, specialty, notes, group_id)
+      VALUES (@name, @phone, @specialty, @notes, @group_id)
     `);
 
     const info = stmt.run({
@@ -31,6 +41,7 @@ export const techniciansRepo = {
       phone: input.phone,
       specialty: input.specialty ?? null,
       notes: input.notes ?? null,
+      group_id: input.group_id ?? null,
     });
 
     return techniciansRepo.findById(info.lastInsertRowid as number) as Technician;
@@ -58,6 +69,14 @@ export const techniciansRepo = {
     const info = getDb().prepare(`
       UPDATE technicians SET status = ? WHERE id = ?
     `).run(status, id);
+    return info.changes > 0;
+  },
+
+  updateQueueDate: (id: number, queueType: 'installation' | 'maintenance'): boolean => {
+    const colName = queueType === 'installation' ? 'last_install_assigned_at' : 'last_maint_assigned_at';
+    const info = getDb().prepare(`
+      UPDATE technicians SET ${colName} = datetime('now', 'localtime') WHERE id = ?
+    `).run(id);
     return info.changes > 0;
   },
 

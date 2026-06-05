@@ -45,6 +45,15 @@ export const createTables = (db: Database) => {
     );
   `);
 
+  // جدول مجموعات الفنيين
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tech_groups (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+  `);
+
   // جدول الفنيين
   db.exec(`
     CREATE TABLE IF NOT EXISTS technicians (
@@ -54,9 +63,13 @@ export const createTables = (db: Database) => {
       specialty  TEXT,   -- installation | maintenance | programming | all
       status     TEXT DEFAULT 'available', -- available | busy | off
       notes      TEXT,
+      group_id   INTEGER REFERENCES tech_groups(id) ON DELETE SET NULL,
+      last_install_assigned_at TEXT DEFAULT NULL,
+      last_maint_assigned_at   TEXT DEFAULT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
+
 
   // جدول الزيارات الميدانية — موحد لجميع الأنواع
   db.exec(`
@@ -158,5 +171,21 @@ export const runMigrations = (db: Database) => {
   if (!visitColNames.includes('archived_at')) {
     db.exec(`ALTER TABLE visits ADD COLUMN archived_at TEXT DEFAULT NULL;`);
     console.log('[Migration] visits: archived_at column added');
+  }
+
+  // Migration 005 — إضافة أعمدة المجموعات والطابور لجدول technicians
+  const techColumns = db.pragma('table_info(technicians)') as { name: string }[];
+  const techColNames = techColumns.map(c => c.name);
+  if (!techColNames.includes('group_id')) {
+    db.exec(`ALTER TABLE technicians ADD COLUMN group_id INTEGER REFERENCES tech_groups(id) ON DELETE SET NULL;`);
+    console.log('[Migration] technicians: group_id column added');
+  }
+  if (!techColNames.includes('last_install_assigned_at')) {
+    db.exec(`ALTER TABLE technicians ADD COLUMN last_install_assigned_at TEXT DEFAULT NULL;`);
+    console.log('[Migration] technicians: last_install_assigned_at column added');
+  }
+  if (!techColNames.includes('last_maint_assigned_at')) {
+    db.exec(`ALTER TABLE technicians ADD COLUMN last_maint_assigned_at TEXT DEFAULT NULL;`);
+    console.log('[Migration] technicians: last_maint_assigned_at column added');
   }
 };

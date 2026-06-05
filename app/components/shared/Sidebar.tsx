@@ -9,7 +9,8 @@ import {
   CalendarDays,
   Phone,
   Settings,
-  HardHat
+  HardHat,
+  BarChart3
 } from 'lucide-react';
 
 interface NavItem {
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { icon: Archive,         label: 'أرشيف الزيارات',   path: '/visits/archive',indent: true },
   { icon: Users,           label: 'العملاء',           path: '/clients'        },
   { icon: HardHat,         label: 'الفنيون',           path: '/technicians'    },
+  { icon: BarChart3,       label: 'التقارير',          path: '/reports'        },
   { icon: Phone,           label: 'سجل الاتصالات',    path: '/calls'          },
 ];
 
